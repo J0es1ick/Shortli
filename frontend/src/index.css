@@ -1,0 +1,69 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&family=Inter:wght@100..900&display=swap");
+
+:root {
+  --bg-color: #ffffff;
+  --input-bg: #f1f1f1;
+  --text-color: #333333;
+  --header-bg: #333333;
+  --header-text: #ffffff;
+  --button-color: #f1f1f1;
+  --button-hover: #9f9f9f;
+  --button-text: #333333;
+  --button-text-hover: #171717;
+  --hover-bg: rgba(0, 0, 0, 0.05);
+  --active-bg: rgb(109, 109, 109);
+  --gradient-start: #ffffff;
+  --gradient-middle: #cdcdcd;
+  --gradient-end: #696969;
+  --box-shadow: 0 2px 10px rgba(0, 0, 0, 0);
+  --header-shadow: 0 2px 10px rgba(0, 0, 0, 0);
+  --footer-shadow: 0 2px 10px rgba(0, 0, 0, 0);
+  --hd-ft-border: none;
+  --border-color: #e4e4e4;
+  --image-filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(161deg)
+    brightness(105%) contrast(101%);
+}
+
+[data-theme="dark"] {
+  --bg-color: #1b1b1b;
+  --input-bg: #1b1b1b;
+  --text-color: #a1a1a1;
+  --header-bg: #1b1b1b;
+  --header-text: #a1a1a1;
+  --button-color: #a1a1a1;
+  --button-hover: #dadada;
+  --button-text: #333333;
+  --button-text-hover: #171717;
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --active-bg: rgba(97, 97, 97, 0.1);
+  --gradient-start: #1b1b1b;
+  --gradient-middle: #1b1b1b;
+  --gradient-end: #1b1b1b;
+  --box-shadow: rgba(255, 255, 255, 0.488);
+  --header-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+  --footer-shadow: 0 -7px 20px rgba(0, 0, 0, 0.2);
+  --hd-ft-border: 2px solid #a1a1a163;
+  --border-color: #373737;
+  --image-filter: invert(70%) sepia(0%) saturate(0%) hue-rotate(225deg)
+    brightness(95%) contrast(82%);
+}
+
+body {
+  background: linear-gradient(
+    0deg,
+    var(--gradient-start),
+    var(--gradient-middle),
+    var(--gradient-end)
+  );
+  background-repeat: no-repeat;
+  background-size: 100vw 40vh;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  scrollbar-width: none;
+}

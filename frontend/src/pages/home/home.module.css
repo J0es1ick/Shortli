@@ -1,0 +1,80 @@
+.main {
+  margin-top: 80px;
+  margin-bottom: 80px;
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.home {
+  min-height: calc(100vh - 94px);
+  padding: 40px 20px;
+}
+
+.history_prompt {
+  max-width: 600px;
+  margin: 40px auto 0;
+  background: var(--header-bg);
+  border: 2px dashed var(--border-color);
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+}
+
+.prompt_content h2 {
+  font-family: "Inter", sans-serif;
+  font-size: 24px;
+  color: var(--header-text);
+  margin-bottom: 12px;
+}
+
+.prompt_content p {
+  font-family: "Inter", sans-serif;
+  color: var(--header-text);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.prompt_actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.signup_button {
+  font-family: "Inter", sans-serif;
+  background: var(--button-color);
+  color: #333333;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.signup_button:hover {
+  background: var(--button-hover);
+  transform: translateY(-2px);
+}
+
+.prompt_actions span {
+  font-family: "Inter", sans-serif;
+  color: var(--header-text);
+  font-size: 14px;
+}
+
+.signin_link {
+  font-family: "Inter", sans-serif;
+  color: var(--button-color);
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.signin_link:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,64 @@
+.url_item {
+  border-bottom: 2px solid var(--border-color);
+  height: 70px;
+  padding: 10px 15px;
+  display: grid;
+  grid-template-columns:
+    8% /* Number */
+    30% /* Original URL */
+    10% /* Short code */
+    8% /* User ID */
+    9% /* Click count */
+    15% /* Created at */
+    15% /* Short link */
+    5%; /* Buttons */
+  align-items: center;
+}
+
+.url_item h1 {
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-color);
+  margin: 0;
+  padding-left: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.url_item a {
+  text-decoration: none;
+  font-family: "Inter", serif;
+  font-weight: 700;
+  font-size: 16px;
+  padding-left: 15px;
+  color: #cfcfcf;
+  transition: 0.3s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.url_item a:hover {
+  transition: 0.3s;
+  color: #7b7b7b;
+}
+
+.url_item button {
+  background-color: var(--button-color);
+  border: none;
+  border-radius: 15px;
+  height: 40px;
+  width: 60%;
+  margin-left: 15px;
+  transition: all 0.2s ease;
+}
+
+.url_item button:hover {
+  background-color: var(--button-hover);
+  cursor: pointer;
+}
+
+.url_item button img {
+  width: 20px;
+  height: 20px;
+}
