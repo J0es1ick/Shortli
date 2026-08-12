@@ -1,0 +1,107 @@
+name: shortli
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shortli}
+      POSTGRES_USER: ${POSTGRES_USER:-shortli}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Create a root .env from .env.example}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5001}:5432"
+    volumes:
+      - shortli-postgres-data:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks:
+      - shortli-internal
+    logging: *default-logging
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    init: true
+    environment:
+      APP_ENV: production
+      SERVER_PORT: "43178"
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USER: ${POSTGRES_USER:-shortli}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_NAME: ${POSTGRES_DB:-shortli}
+      DATABASE_SSLMODE: disable
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:43176}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:43176}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY_HEADERS: "true"
+      ANALYTICS_SALT: ${ANALYTICS_SALT:?Set ANALYTICS_SALT in the root .env}
+      METRICS_TOKEN: ${METRICS_TOKEN:?Set METRICS_TOKEN in the root .env}
+      CLICK_SPOOL_PATH: /var/lib/shortli/click-spool
+      SHUTDOWN_TIMEOUT_SECONDS: "25"
+      ANALYTICS_RETENTION_DAYS: ${ANALYTICS_RETENTION_DAYS:-365}
+      REPORT_RETENTION_DAYS: ${REPORT_RETENTION_DAYS:-180}
+    expose:
+      - "43178"
+    volumes:
+      - shortli-click-spool:/var/lib/shortli/click-spool
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:43178/api/health/ready"]
+      interval: 10s
+      timeout: 4s
+      retries: 6
+      start_period: 15s
+    networks:
+      - shortli-internal
+    logging: *default-logging
+    stop_grace_period: 35s
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:43176}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${SHORTLI_HTTP_PORT:-43176}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=32m
+      - /var/run:size=4m
+      - /tmp:size=16m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    networks:
+      - shortli-internal
+    logging: *default-logging
+
+networks:
+  shortli-internal:
+    driver: bridge
+
+volumes:
+  shortli-postgres-data:
+  shortli-click-spool:

@@ -1,0 +1,6 @@
+.env
+.shortli-go-cache/
+backups/*.dump
+backups/*.sql
+backups/*.gz
+!backups/.gitkeep

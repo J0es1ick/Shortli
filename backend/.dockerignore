@@ -1,0 +1,5 @@
+.env
+.runtime
+.shortli-*.log
+migrations
+**/*_test.go
