@@ -98,79 +98,79 @@ func (r *UserRepository) FindTotalUsers() (int, error) {
 }
 
 func (r *UserRepository) UpdateUser(user *models.User) error {
-    query := `
+	query := `
         UPDATE user_info 
         SET email = $1, is_admin = $2
         WHERE user_id = $3
     `
-    result, err := r.db.Exec(query, user.Email, user.IsAdmin, user.ID)
-    if err != nil {
-        return fmt.Errorf("update user error: %v", err)
-    }
-    
-    rowsAffected, err := result.RowsAffected()
-    if err != nil {
-        return fmt.Errorf("failed to get rows affected: %v", err)
-    }
-    
-    if rowsAffected == 0 {
-        return fmt.Errorf("user not found")
-    }
-    
-    return nil
+	result, err := r.db.Exec(query, user.Email, user.IsAdmin, user.ID)
+	if err != nil {
+		return fmt.Errorf("update user error: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
 }
 
 func (r *UserRepository) UpdatePassword(userID int, newPasswordHash string) error {
-    query := `UPDATE user_info SET password_hash = $1 WHERE user_id = $2`
-    result, err := r.db.Exec(query, newPasswordHash, userID)
-    if err != nil {
-        return fmt.Errorf("update password error: %v", err)
-    }
-    
-    rowsAffected, err := result.RowsAffected()
-    if err != nil {
-        return fmt.Errorf("failed to get rows affected: %v", err)
-    }
-    
-    if rowsAffected == 0 {
-        return fmt.Errorf("user not found")
-    }
-    
-    return nil
+	query := `UPDATE user_info SET password_hash = $1 WHERE user_id = $2`
+	result, err := r.db.Exec(query, newPasswordHash, userID)
+	if err != nil {
+		return fmt.Errorf("update password error: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
 }
 
 func (r *UserRepository) DeleteUser(userID int) error {
-    query := `DELETE FROM user_info WHERE user_id = $1`
-    result, err := r.db.Exec(query, userID)
-    if err != nil {
-        return fmt.Errorf("delete user error: %v", err)
-    }
-    
-    rowsAffected, err := result.RowsAffected()
-    if err != nil {
-        return fmt.Errorf("failed to get rows affected: %v", err)
-    }
-    
-    if rowsAffected == 0 {
-        return fmt.Errorf("user not found")
-    }
-    
-    return nil
+	query := `DELETE FROM user_info WHERE user_id = $1`
+	result, err := r.db.Exec(query, userID)
+	if err != nil {
+		return fmt.Errorf("delete user error: %v", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %v", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
 }
 
 func (r *UserRepository) GetAllUsers(limit, offset int) ([]models.User, error) {
-    query := `
+	query := `
         SELECT user_id, email, is_admin, created_at
         FROM user_info
         ORDER BY created_at DESC
         LIMIT $1 OFFSET $2
     `
-    
-    users := []models.User{}
-    err := r.db.Select(&users, query, limit, offset)
-    if err != nil {
-        return nil, fmt.Errorf("get all users error: %v", err)
-    }
-    
-    return users, nil
+
+	users := []models.User{}
+	err := r.db.Select(&users, query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("get all users error: %v", err)
+	}
+
+	return users, nil
 }

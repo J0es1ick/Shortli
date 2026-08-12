@@ -13,11 +13,11 @@ import (
 type contextKey string
 
 const (
-	UserContextKey contextKey = "user"
-	SessionCookieName string = "session_id"
+	UserContextKey    contextKey = "user"
+	SessionCookieName string     = "session_id"
 )
 
-func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository.SessionRepository) func(http.Handler) http.Handler {
+func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository.SessionRepository, secureCookies bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			sessionCookie, err := r.Cookie(SessionCookieName)
@@ -29,10 +29,13 @@ func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository
 			session, err := sessionRepo.GetSessionByID(sessionCookie.Value)
 			if err != nil {
 				http.SetCookie(w, &http.Cookie{
-					Name:    SessionCookieName,
-					Value:   "",
-					Expires: time.Now().Add(-1 * time.Hour),
-					Path:    "/",
+					Name:     SessionCookieName,
+					Value:    "",
+					Expires:  time.Now().Add(-1 * time.Hour),
+					Path:     "/",
+					HttpOnly: true,
+					Secure:   secureCookies,
+					SameSite: http.SameSiteStrictMode,
 				})
 				next.ServeHTTP(w, r)
 				return
@@ -41,10 +44,13 @@ func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository
 			if time.Now().After(session.ExpiresAt) {
 				sessionRepo.DeleteSession(session.ID)
 				http.SetCookie(w, &http.Cookie{
-					Name:    SessionCookieName,
-					Value:   "",
-					Expires: time.Now().Add(-1 * time.Hour),
-					Path:    "/",
+					Name:     SessionCookieName,
+					Value:    "",
+					Expires:  time.Now().Add(-1 * time.Hour),
+					Path:     "/",
+					HttpOnly: true,
+					Secure:   secureCookies,
+					SameSite: http.SameSiteStrictMode,
 				})
 				next.ServeHTTP(w, r)
 				return
@@ -61,12 +67,12 @@ func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository
 			sessionRepo.CreateSession(session)
 
 			http.SetCookie(w, &http.Cookie{
-				Name:    SessionCookieName,
-				Value:   session.ID,
-				Expires: newExpires,
-				Path:    "/",
+				Name:     SessionCookieName,
+				Value:    session.ID,
+				Expires:  newExpires,
+				Path:     "/",
 				HttpOnly: true,
-				Secure:   false,
+				Secure:   secureCookies,
 				SameSite: http.SameSiteStrictMode,
 			})
 

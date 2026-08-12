@@ -8,6 +8,7 @@ import (
 	response "github.com/J0es1ick/shortli/internal/app/httputils"
 	"github.com/J0es1ick/shortli/internal/app/middleware"
 	"github.com/J0es1ick/shortli/internal/repository"
+	"github.com/J0es1ick/shortli/pkg/validator"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -73,10 +74,12 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Email == "" {
-		response.Error(w, http.StatusBadRequest, "Email is required")
+	email, err := validator.ValidateEmail(req.Email)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	req.Email = email
 
 	existingUser, err := h.userRepo.FindUserByEmail(req.Email)
 	if err == nil && existingUser.ID != user.ID {
@@ -116,8 +119,8 @@ func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(req.NewPassword) < 6 {
-		response.Error(w, http.StatusBadRequest, "New password must be at least 6 characters")
+	if err := validator.ValidatePassword(req.NewPassword); err != nil {
+		response.Error(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -9,26 +11,27 @@ import (
 )
 
 type RateLimiter struct {
-	mux 	sync.Mutex
-	limit 	int
-	window  time.Duration
-	requests map[string][]time.Time
+	mux               sync.Mutex
+	limit             int
+	window            time.Duration
+	requests          map[string][]time.Time
+	trustProxyHeaders bool
 }
 
-func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
-    return &RateLimiter{
-        requests: make(map[string][]time.Time),
-        limit:    limit,
-        window:   window,
-    }
+func NewRateLimiter(limit int, window time.Duration, trustProxyHeaders bool) *RateLimiter {
+	return &RateLimiter{
+		requests:          make(map[string][]time.Time),
+		limit:             limit,
+		window:            window,
+		trustProxyHeaders: trustProxyHeaders,
+	}
 }
 
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		clientIP := getClientIP(r) 
+		clientIP := GetClientIP(r, rl.trustProxyHeaders)
 
 		rl.mux.Lock()
-		defer rl.mux.Unlock()
 
 		now := time.Now()
 		if _, exists := rl.requests[clientIP]; !exists {
@@ -44,21 +47,31 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		rl.requests[clientIP] = validRequests
 
 		if len(rl.requests[clientIP]) >= rl.limit {
+			rl.mux.Unlock()
 			response.Error(w, http.StatusTooManyRequests, "Rate limit exceeded")
 			return
 		}
 
 		rl.requests[clientIP] = append(rl.requests[clientIP], now)
+		rl.mux.Unlock()
 		next.ServeHTTP(w, r)
 	})
 }
 
-func getClientIP(r *http.Request) string {
-    if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
-        return ip
-    }
-    if ip := r.Header.Get("X-Real-IP"); ip != "" {
-        return ip
-    }
-    return r.RemoteAddr
+func GetClientIP(r *http.Request, trustProxyHeaders bool) string {
+	if trustProxyHeaders {
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			if ip := strings.TrimSpace(strings.Split(forwarded, ",")[0]); net.ParseIP(ip) != nil {
+				return ip
+			}
+		}
+		if ip := strings.TrimSpace(r.Header.Get("X-Real-IP")); net.ParseIP(ip) != nil {
+			return ip
+		}
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }

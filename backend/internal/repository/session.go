@@ -21,6 +21,7 @@ func (r *SessionRepository) CreateSession(session *models.Session) error {
 	query := `
 		INSERT INTO session_info (session_id, user_id, expires_at, created_at)
 		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (session_id) DO UPDATE SET expires_at = EXCLUDED.expires_at
 	`
 	_, err := r.db.Exec(
 		query,

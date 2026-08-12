@@ -11,18 +11,21 @@ import (
 	"github.com/J0es1ick/shortli/internal/models"
 	"github.com/J0es1ick/shortli/internal/repository"
 	"github.com/J0es1ick/shortli/internal/utils"
+	"github.com/J0es1ick/shortli/pkg/validator"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
-	userRepo    *repository.UserRepository
-	sessionRepo *repository.SessionRepository
+	userRepo      *repository.UserRepository
+	sessionRepo   *repository.SessionRepository
+	secureCookies bool
 }
 
-func NewAuthHandler(userRepo *repository.UserRepository, sessionRepo *repository.SessionRepository) *AuthHandler {
+func NewAuthHandler(userRepo *repository.UserRepository, sessionRepo *repository.SessionRepository, secureCookies bool) *AuthHandler {
 	return &AuthHandler{
-		userRepo:    userRepo,
-		sessionRepo: sessionRepo,
+		userRepo:      userRepo,
+		sessionRepo:   sessionRepo,
+		secureCookies: secureCookies,
 	}
 }
 
@@ -42,23 +45,25 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if req.Email == "" || req.Password == "" {
-		response.Error(w, http.StatusBadRequest, "Email and password are required")
+	email, err := validator.ValidateEmail(req.Email)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	if len(req.Password) < 6 {
-		response.Error(w, http.StatusBadRequest, "Password must be at least 6 characters")
+	if err := validator.ValidatePassword(req.Password); err != nil {
+		response.Error(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	req.Email = email
 
-	_, err := h.userRepo.FindUserByEmail(req.Email)
+	_, err = h.userRepo.FindUserByEmail(req.Email)
 	if err == nil {
 		response.Error(w, http.StatusConflict, "User with this email already exists")
 		return
@@ -95,13 +100,19 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	user, err := h.userRepo.FindUserByEmail(req.Email)
+	email, err := validator.ValidateEmail(req.Email)
+	if err != nil {
+		response.Error(w, http.StatusUnauthorized, "Invalid email or password")
+		return
+	}
+	user, err := h.userRepo.FindUserByEmail(email)
 	if err != nil {
 		response.Error(w, http.StatusUnauthorized, "Invalid email or password")
 		return
@@ -137,7 +148,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Expires:  expiresAt,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   h.secureCookies,
 		SameSite: http.SameSiteStrictMode,
 	})
 
@@ -161,15 +172,16 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.sessionRepo.DeleteSession(sessionCookie.Value); err != nil {
-		_ = h.sessionRepo.DeleteSession(sessionCookie.Value)
-	}
+	_ = h.sessionRepo.DeleteSession(sessionCookie.Value)
 
 	http.SetCookie(w, &http.Cookie{
-		Name:    "session_id",
-		Value:   "",
-		Expires: time.Now().Add(-1 * time.Hour),
-		Path:    "/",
+		Name:     "session_id",
+		Value:    "",
+		Expires:  time.Now().Add(-1 * time.Hour),
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   h.secureCookies,
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	response.JSON(w, http.StatusOK, map[string]string{
