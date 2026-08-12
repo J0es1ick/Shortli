@@ -18,12 +18,12 @@ func generateDeterministicCode(originalURL string) string {
 	for i := 0; i < len(originalURL); i++ {
 		hash = ((hash << 5) + hash) + uint32(originalURL[i])
 	}
-	
+
 	return uint32ToHex(hash)
 }
 
 func generateRandomCode() string {
-	bytes := make([]byte, 4) 
+	bytes := make([]byte, 4)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
 }
