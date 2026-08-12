@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -34,41 +33,78 @@ func main() {
 	fmt.Println("Connection successful")
 	defer db.Close()
 
+	migrationCtx, migrationCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	if err := database.Migrate(migrationCtx, db.DB); err != nil {
+		migrationCancel()
+		log.Fatalf("Failed to apply database migrations: %v", err)
+	}
+	migrationCancel()
+	log.Println("Database migrations are up to date")
+
 	urlRepo := repository.NewUrlRepository(db.DB)
 	userRepo := repository.NewUserRepository(db.DB)
 	sessionRepo := repository.NewSessionRepository(db.DB)
-	handler := routes.SetupRoutes(cfg, urlRepo, userRepo, sessionRepo)
+	apiKeyRepo := repository.NewAPIKeyRepository(db.DB)
+	abuseRepo := repository.NewAbuseRepository(db.DB)
+	maintenanceRepo := repository.NewMaintenanceRepository(db.DB)
+	clickRecorder, err := tasks.NewClickRecorder(urlRepo, cfg.ClickSpoolPath, 2)
+	if err != nil {
+		log.Fatalf("Failed to initialize durable click recorder: %v", err)
+	}
+	metrics := middleware.NewMetricsRegistry()
+	handler := routes.SetupRoutes(
+		cfg, urlRepo, userRepo, sessionRepo, apiKeyRepo,
+		abuseRepo, clickRecorder, metrics,
+	)
 
-	cleanupTask := tasks.NewCleanupTask(urlRepo, 24*time.Hour)
-	go cleanupTask.Start()
+	runContext, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stopSignals()
+	maintenanceTask := tasks.NewMaintenanceTask(
+		maintenanceRepo, 24*time.Hour,
+		cfg.AnalyticsRetentionDays, cfg.ReportRetentionDays,
+	)
+	go maintenanceTask.Start(runContext)
 
-	rateLimiter := middleware.NewRateLimiter(100, time.Minute) 
-    handler = rateLimiter.Middleware(handler)
+	rateLimiter := middleware.NewRateLimiter(300, time.Minute, cfg.TrustProxyHeaders)
+	handler = rateLimiter.Middleware(handler)
+	handler = metrics.Middleware(handler)
 
 	server := &http.Server{
-		Addr:    ":" + cfg.ServerPort,
-		Handler: handler,
+		Addr:              ":" + cfg.ServerPort,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
+	serverErrors := make(chan error, 1)
 	go func() {
 		log.Printf("Server starting on port %s", cfg.ServerPort)
-		if err := server.ListenAndServe(); err != nil {
-			log.Printf("Server failed: %v", err)
-			quit <- syscall.SIGTERM
-		}
+		serverErrors <- server.ListenAndServe()
 	}()
 
-	<- quit
-	log.Println("Shutting down server")
+	select {
+	case <-runContext.Done():
+		log.Println("Shutdown signal received")
+	case err := <-serverErrors:
+		if err != nil && err != http.ErrServerClosed {
+			log.Printf("Server failed: %v", err)
+		}
+	}
+	stopSignals()
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		time.Duration(cfg.ShutdownTimeout)*time.Second,
+	)
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("Server shutdown error: %v", err)
+	}
+	if err := clickRecorder.Close(shutdownCtx); err != nil {
+		log.Printf("Click recorder shutdown: %v", err)
 	}
 
 	log.Println("Server gracefully stopped")
