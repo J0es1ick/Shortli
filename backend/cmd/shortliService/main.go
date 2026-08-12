@@ -51,10 +51,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize durable click recorder: %v", err)
 	}
-	metrics := middleware.NewMetricsRegistry()
+	clientIP := middleware.NewClientIPResolver(cfg.TrustedProxyCIDRs)
+	metrics := middleware.NewMetricsRegistry(clientIP)
 	handler := routes.SetupRoutes(
 		cfg, urlRepo, userRepo, sessionRepo, apiKeyRepo,
-		abuseRepo, clickRecorder, metrics,
+		abuseRepo, clickRecorder, metrics, clientIP,
 	)
 
 	runContext, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -65,7 +66,7 @@ func main() {
 	)
 	go maintenanceTask.Start(runContext)
 
-	rateLimiter := middleware.NewRateLimiter(300, time.Minute, cfg.TrustProxyHeaders)
+	rateLimiter := middleware.NewRateLimiter(300, time.Minute, clientIP)
 	handler = rateLimiter.Middleware(handler)
 	handler = metrics.Middleware(handler)
 

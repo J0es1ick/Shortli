@@ -27,17 +27,17 @@ func (c *CleanupTask) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			c.runCleanup()
+			c.runCleanup(ctx)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (c *CleanupTask) runCleanup() {
+func (c *CleanupTask) runCleanup(ctx context.Context) {
 	log.Println("Checking expired URLs...")
 
-	count, err := c.urlRepository.DeactivateExpiredUrls()
+	count, err := c.urlRepository.DeactivateExpiredUrls(ctx)
 	if err != nil {
 		log.Printf("Cleanup failed: %v", err)
 		return
@@ -51,5 +51,7 @@ func (c *CleanupTask) runCleanup() {
 }
 
 func (t *CleanupTask) RunOnce() (int64, error) {
-	return t.urlRepository.DeactivateExpiredUrls()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return t.urlRepository.DeactivateExpiredUrls(ctx)
 }

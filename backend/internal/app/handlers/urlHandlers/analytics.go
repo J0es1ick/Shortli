@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/J0es1ick/shortli/internal/app/middleware"
 	"github.com/J0es1ick/shortli/internal/models"
 )
 
@@ -32,7 +31,7 @@ func (h *Handler) clickEventFromRequest(r *http.Request, urlID int) *models.Clic
 		country = "Unknown"
 	}
 
-	clientIP := middleware.GetClientIP(r, h.cfg.TrustProxyHeaders)
+	clientIP := h.clientIP.Resolve(r)
 	mac := hmac.New(sha256.New, []byte(h.cfg.AnalyticsSalt))
 	_, _ = mac.Write([]byte(clientIP))
 

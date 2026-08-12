@@ -2,8 +2,10 @@ package userHandlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	response "github.com/J0es1ick/shortli/internal/app/httputils"
 	"github.com/J0es1ick/shortli/internal/app/middleware"
@@ -13,12 +15,14 @@ import (
 )
 
 type UserHandler struct {
-	userRepo *repository.UserRepository
+	userRepo      *repository.UserRepository
+	invalidate    func(string)
+	secureCookies bool
 }
 
-func NewUserHandler(userRepo *repository.UserRepository) *UserHandler {
+func NewUserHandler(userRepo *repository.UserRepository, invalidate func(string), secureCookies bool) *UserHandler {
 	return &UserHandler{
-		userRepo: userRepo,
+		userRepo: userRepo, invalidate: invalidate, secureCookies: secureCookies,
 	}
 }
 
@@ -81,14 +85,14 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Email = email
 
-	existingUser, err := h.userRepo.FindUserByEmail(req.Email)
+	existingUser, err := h.userRepo.FindUserByEmail(r.Context(), req.Email)
 	if err == nil && existingUser.ID != user.ID {
 		response.Error(w, http.StatusConflict, "Email already taken")
 		return
 	}
 
 	user.Email = req.Email
-	if err := h.userRepo.UpdateUser(user); err != nil {
+	if err := h.userRepo.UpdateUser(r.Context(), user); err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to update profile")
 		return
 	}
@@ -135,10 +139,11 @@ func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userRepo.UpdatePassword(user.ID, string(newHashedPassword)); err != nil {
+	if err := h.userRepo.UpdatePassword(r.Context(), user.ID, string(newHashedPassword)); err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to update password")
 		return
 	}
+	h.clearSessionCookie(w)
 
 	response.JSON(w, http.StatusOK, map[string]string{
 		"status":  "success",
@@ -158,14 +163,31 @@ func (h *UserHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userRepo.DeleteUser(user.ID); err != nil {
+	shortCodes, err := h.userRepo.DeleteUser(r.Context(), user.ID)
+	if err != nil {
+		if errors.Is(err, repository.ErrLastAdmin) {
+			response.Error(w, http.StatusConflict, "The last administrator cannot be deleted")
+			return
+		}
 		response.Error(w, http.StatusInternalServerError, "Failed to delete account")
 		return
 	}
+	for _, shortCode := range shortCodes {
+		h.invalidate(shortCode)
+	}
+	h.clearSessionCookie(w)
 
 	response.JSON(w, http.StatusOK, map[string]string{
 		"status":  "success",
 		"message": "Account deleted successfully",
+	})
+}
+
+func (h *UserHandler) clearSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name: middleware.SessionCookieName, Value: "", Path: "/",
+		Expires: time.Now().Add(-time.Hour), MaxAge: -1, HttpOnly: true,
+		Secure: h.secureCookies, SameSite: http.SameSiteStrictMode,
 	})
 }
 
@@ -187,13 +209,13 @@ func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
 	offset := (page - 1) * limit
 
-	users, err := h.userRepo.GetAllUsers(limit, offset)
+	users, err := h.userRepo.GetAllUsers(r.Context(), limit, offset)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to get users")
 		return
 	}
 
-	total, err := h.userRepo.FindTotalUsers()
+	total, err := h.userRepo.FindTotalUsers(r.Context())
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to get total count")
 		return
@@ -238,15 +260,21 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+	email, err := validator.ValidateEmail(req.Email)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	req.Email = email
 
-	user, err := h.userRepo.FindUserByID(userID)
+	user, err := h.userRepo.FindUserByID(r.Context(), userID)
 	if err != nil {
 		response.Error(w, http.StatusNotFound, "User not found")
 		return
 	}
 
 	if req.Email != user.Email {
-		existingUser, err := h.userRepo.FindUserByEmail(req.Email)
+		existingUser, err := h.userRepo.FindUserByEmail(r.Context(), req.Email)
 		if err == nil && existingUser.ID != user.ID {
 			response.Error(w, http.StatusConflict, "Email already taken")
 			return
@@ -256,7 +284,11 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	user.Email = req.Email
 	user.IsAdmin = req.IsAdmin
 
-	if err := h.userRepo.UpdateUser(user); err != nil {
+	if err := h.userRepo.UpdateUser(r.Context(), user); err != nil {
+		if errors.Is(err, repository.ErrLastAdmin) {
+			response.Error(w, http.StatusConflict, "The last administrator cannot be demoted")
+			return
+		}
 		response.Error(w, http.StatusInternalServerError, "Failed to update user")
 		return
 	}
@@ -288,9 +320,17 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userRepo.DeleteUser(userID); err != nil {
+	shortCodes, err := h.userRepo.DeleteUser(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, repository.ErrLastAdmin) {
+			response.Error(w, http.StatusConflict, "The last administrator cannot be deleted")
+			return
+		}
 		response.Error(w, http.StatusInternalServerError, "Failed to delete user")
 		return
+	}
+	for _, shortCode := range shortCodes {
+		h.invalidate(shortCode)
 	}
 
 	response.JSON(w, http.StatusOK, map[string]string{

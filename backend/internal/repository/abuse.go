@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -19,8 +20,8 @@ func NewAbuseRepository(db *sqlx.DB) *AbuseRepository {
 	return &AbuseRepository{db: db}
 }
 
-func (r *AbuseRepository) Create(report *models.AbuseReport) error {
-	err := r.db.QueryRow(`
+func (r *AbuseRepository) Create(ctx context.Context, report *models.AbuseReport) error {
+	err := r.db.QueryRowContext(ctx, `
 		INSERT INTO abuse_report
 			(url_id, short_code, reporter_email, reporter_ip_hash, reason, details)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -36,9 +37,9 @@ func (r *AbuseRepository) Create(report *models.AbuseReport) error {
 	return nil
 }
 
-func (r *AbuseRepository) FindByID(id int64) (*models.AbuseReport, error) {
+func (r *AbuseRepository) FindByID(ctx context.Context, id int64) (*models.AbuseReport, error) {
 	report := &models.AbuseReport{}
-	err := r.db.Get(report, `
+	err := r.db.GetContext(ctx, report, `
 		SELECT ar.report_id, ar.url_id, ar.short_code,
 			COALESCE(u.original_url, '') AS original_url,
 			ar.reporter_email, ar.reporter_ip_hash, ar.reason, ar.details,
@@ -56,7 +57,7 @@ func (r *AbuseRepository) FindByID(id int64) (*models.AbuseReport, error) {
 	return report, nil
 }
 
-func (r *AbuseRepository) List(status string, limit, offset int) ([]models.AbuseReport, int, error) {
+func (r *AbuseRepository) List(ctx context.Context, status string, limit, offset int) ([]models.AbuseReport, int, error) {
 	reports := []models.AbuseReport{}
 	args := []interface{}{limit, offset}
 	where := ""
@@ -75,7 +76,7 @@ func (r *AbuseRepository) List(status string, limit, offset int) ([]models.Abuse
 		ORDER BY CASE WHEN ar.status = 'pending' THEN 0 ELSE 1 END, ar.created_at DESC
 		LIMIT $1 OFFSET $2
 	`
-	if err := r.db.Select(&reports, query, args...); err != nil {
+	if err := r.db.SelectContext(ctx, &reports, query, args...); err != nil {
 		return nil, 0, fmt.Errorf("list abuse reports: %w", err)
 	}
 
@@ -86,14 +87,44 @@ func (r *AbuseRepository) List(status string, limit, offset int) ([]models.Abuse
 		countArgs = append(countArgs, status)
 	}
 	var total int
-	if err := r.db.Get(&total, countQuery, countArgs...); err != nil {
+	if err := r.db.GetContext(ctx, &total, countQuery, countArgs...); err != nil {
 		return nil, 0, fmt.Errorf("count abuse reports: %w", err)
 	}
 	return reports, total, nil
 }
 
-func (r *AbuseRepository) Resolve(id int64, status, note string, reviewedBy int) error {
-	result, err := r.db.Exec(`
+func (r *AbuseRepository) Resolve(ctx context.Context, id int64, status, note string, reviewedBy int, pauseLink bool, blockedDomain, blockReason string) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin abuse resolution: %w", err)
+	}
+	defer tx.Rollback()
+	var existingID int64
+	if err := tx.GetContext(ctx, &existingID, `SELECT report_id FROM abuse_report WHERE report_id = $1 FOR UPDATE`, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("abuse report not found")
+		}
+		return fmt.Errorf("lock abuse report: %w", err)
+	}
+	if pauseLink {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE url_info SET is_active = FALSE
+			WHERE url_id = (SELECT url_id FROM abuse_report WHERE report_id = $1)
+		`, id); err != nil {
+			return fmt.Errorf("pause reported link: %w", err)
+		}
+	}
+	if blockedDomain != "" {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO blocked_domain(domain, reason, created_by)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (domain) DO UPDATE
+			SET reason = EXCLUDED.reason, created_by = EXCLUDED.created_by, created_at = NOW()
+		`, normalizeDomain(blockedDomain), blockReason, reviewedBy); err != nil {
+			return fmt.Errorf("block reported domain: %w", err)
+		}
+	}
+	result, err := tx.ExecContext(ctx, `
 		UPDATE abuse_report
 		SET status = $1, resolution_note = $2, reviewed_by = $3, reviewed_at = $4
 		WHERE report_id = $5
@@ -105,13 +136,13 @@ func (r *AbuseRepository) Resolve(id int64, status, note string, reviewedBy int)
 	if affected == 0 {
 		return fmt.Errorf("abuse report not found")
 	}
-	return nil
+	return tx.Commit()
 }
 
-func (r *AbuseRepository) IsDomainBlocked(domain string) (bool, error) {
+func (r *AbuseRepository) IsDomainBlocked(ctx context.Context, domain string) (bool, error) {
 	domain = normalizeDomain(domain)
 	var blocked bool
-	err := r.db.Get(&blocked, `
+	err := r.db.GetContext(ctx, &blocked, `
 		SELECT EXISTS (
 			SELECT 1 FROM blocked_domain
 			WHERE $1 = domain OR $1 LIKE '%.' || domain
@@ -123,12 +154,12 @@ func (r *AbuseRepository) IsDomainBlocked(domain string) (bool, error) {
 	return blocked, nil
 }
 
-func (r *AbuseRepository) BlockDomain(domain, reason string, createdBy int) error {
+func (r *AbuseRepository) BlockDomain(ctx context.Context, domain, reason string, createdBy int) error {
 	domain = normalizeDomain(domain)
 	if domain == "" {
 		return fmt.Errorf("domain is required")
 	}
-	_, err := r.db.Exec(`
+	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO blocked_domain(domain, reason, created_by)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (domain) DO UPDATE
@@ -140,9 +171,9 @@ func (r *AbuseRepository) BlockDomain(domain, reason string, createdBy int) erro
 	return nil
 }
 
-func (r *AbuseRepository) ListBlockedDomains() ([]models.BlockedDomain, error) {
+func (r *AbuseRepository) ListBlockedDomains(ctx context.Context) ([]models.BlockedDomain, error) {
 	items := []models.BlockedDomain{}
-	if err := r.db.Select(&items, `
+	if err := r.db.SelectContext(ctx, &items, `
 		SELECT domain_id, domain, reason, created_by, created_at
 		FROM blocked_domain ORDER BY created_at DESC
 	`); err != nil {
@@ -151,8 +182,8 @@ func (r *AbuseRepository) ListBlockedDomains() ([]models.BlockedDomain, error) {
 	return items, nil
 }
 
-func (r *AbuseRepository) UnblockDomain(id int64) error {
-	result, err := r.db.Exec(`DELETE FROM blocked_domain WHERE domain_id = $1`, id)
+func (r *AbuseRepository) UnblockDomain(ctx context.Context, id int64) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM blocked_domain WHERE domain_id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("unblock domain: %w", err)
 	}

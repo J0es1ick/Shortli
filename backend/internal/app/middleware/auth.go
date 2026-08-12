@@ -26,7 +26,7 @@ func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository
 				return
 			}
 
-			session, err := sessionRepo.GetSessionByID(sessionCookie.Value)
+			session, err := sessionRepo.GetSessionByID(r.Context(), sessionCookie.Value)
 			if err != nil {
 				http.SetCookie(w, &http.Cookie{
 					Name:     SessionCookieName,
@@ -42,7 +42,7 @@ func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository
 			}
 
 			if time.Now().After(session.ExpiresAt) {
-				sessionRepo.DeleteSession(session.ID)
+				_ = sessionRepo.DeleteSession(r.Context(), sessionCookie.Value)
 				http.SetCookie(w, &http.Cookie{
 					Name:     SessionCookieName,
 					Value:    "",
@@ -56,25 +56,11 @@ func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository
 				return
 			}
 
-			user, err := userRepo.FindUserByID(session.UserID)
+			user, err := userRepo.FindUserByID(r.Context(), session.UserID)
 			if err != nil {
 				next.ServeHTTP(w, r)
 				return
 			}
-
-			newExpires := time.Now().Add(7 * 24 * time.Hour)
-			session.ExpiresAt = newExpires
-			sessionRepo.CreateSession(session)
-
-			http.SetCookie(w, &http.Cookie{
-				Name:     SessionCookieName,
-				Value:    session.ID,
-				Expires:  newExpires,
-				Path:     "/",
-				HttpOnly: true,
-				Secure:   secureCookies,
-				SameSite: http.SameSiteStrictMode,
-			})
 
 			ctx := context.WithValue(r.Context(), UserContextKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))

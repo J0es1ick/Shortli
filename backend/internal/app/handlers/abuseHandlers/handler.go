@@ -22,7 +22,7 @@ type Handler struct {
 	abuseRepo  *repository.AbuseRepository
 	urlRepo    *repository.UrlRepository
 	salt       string
-	trustProxy bool
+	clientIP   *middleware.ClientIPResolver
 	invalidate func(string)
 }
 
@@ -54,12 +54,12 @@ func NewHandler(
 	abuseRepo *repository.AbuseRepository,
 	urlRepo *repository.UrlRepository,
 	salt string,
-	trustProxy bool,
+	clientIP *middleware.ClientIPResolver,
 	invalidate func(string),
 ) *Handler {
 	return &Handler{
 		abuseRepo: abuseRepo, urlRepo: urlRepo, salt: salt,
-		trustProxy: trustProxy, invalidate: invalidate,
+		clientIP: clientIP, invalidate: invalidate,
 	}
 }
 
@@ -101,19 +101,19 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		reporterEmail = &email
 	}
 
-	link, err := h.urlRepo.FindUrlByCode(shortCode)
+	link, err := h.urlRepo.FindUrlByCode(r.Context(), shortCode)
 	if err != nil {
 		response.Error(w, http.StatusNotFound, "Short link not found")
 		return
 	}
-	ipHash := h.hashIP(middleware.GetClientIP(r, h.trustProxy))
+	ipHash := h.hashIP(h.clientIP.Resolve(r))
 	urlID := int64(link.ID)
 	report := &models.AbuseReport{
 		URLID: &urlID, ShortCode: shortCode,
 		ReporterEmail: reporterEmail, ReporterIPHash: ipHash,
 		Reason: reason, Details: details,
 	}
-	if err := h.abuseRepo.Create(report); err != nil {
+	if err := h.abuseRepo.Create(r.Context(), report); err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			response.Error(w, http.StatusConflict, "A pending report for this link was already received")
 			return
@@ -137,7 +137,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusBadRequest, "Invalid report status")
 		return
 	}
-	reports, total, err := h.abuseRepo.List(status, limit, (page-1)*limit)
+	reports, total, err := h.abuseRepo.List(r.Context(), status, limit, (page-1)*limit)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to load abuse reports")
 		return
@@ -171,47 +171,39 @@ func (h *Handler) Resolve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	report, err := h.abuseRepo.FindByID(id)
+	report, err := h.abuseRepo.FindByID(r.Context(), id)
 	if err != nil {
 		response.Error(w, http.StatusNotFound, "Abuse report not found")
 		return
 	}
 	user := middleware.GetUserFromContext(r)
 	shouldPause := req.PauseLink || req.BlockDomain || req.Status == "blocked"
-	if shouldPause && report.URLID != nil {
-		link, findErr := h.urlRepo.FindUrlByCode(report.ShortCode)
-		if findErr == nil {
-			if err := h.urlRepo.UpdateUrlSettings(report.ShortCode, false, link.ExpiresAt); err != nil {
-				response.Error(w, http.StatusInternalServerError, "Failed to pause reported link")
-				return
-			}
-			h.invalidate(report.ShortCode)
-		}
-	}
+	blockedDomain := ""
+	blockReason := ""
 	if req.BlockDomain && report.OriginalURL != "" {
 		parsed, parseErr := url.Parse(report.OriginalURL)
 		if parseErr != nil || parsed.Hostname() == "" {
 			response.Error(w, http.StatusInternalServerError, "Failed to identify destination domain")
 			return
 		}
-		reason := req.ResolutionNote
-		if reason == "" {
-			reason = fmt.Sprintf("Blocked from abuse report #%d", id)
-		}
-		if err := h.abuseRepo.BlockDomain(parsed.Hostname(), reason, user.ID); err != nil {
-			response.Error(w, http.StatusInternalServerError, "Failed to block destination domain")
-			return
+		blockedDomain = parsed.Hostname()
+		blockReason = req.ResolutionNote
+		if blockReason == "" {
+			blockReason = fmt.Sprintf("Blocked from abuse report #%d", id)
 		}
 	}
-	if err := h.abuseRepo.Resolve(id, req.Status, req.ResolutionNote, user.ID); err != nil {
+	if err := h.abuseRepo.Resolve(r.Context(), id, req.Status, req.ResolutionNote, user.ID, shouldPause, blockedDomain, blockReason); err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to resolve abuse report")
 		return
+	}
+	if shouldPause {
+		h.invalidate(report.ShortCode)
 	}
 	response.JSON(w, http.StatusOK, map[string]string{"status": req.Status})
 }
 
-func (h *Handler) BlockedDomains(w http.ResponseWriter, _ *http.Request) {
-	items, err := h.abuseRepo.ListBlockedDomains()
+func (h *Handler) BlockedDomains(w http.ResponseWriter, r *http.Request) {
+	items, err := h.abuseRepo.ListBlockedDomains(r.Context())
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to load blocked domains")
 		return
@@ -225,7 +217,7 @@ func (h *Handler) UnblockDomain(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusBadRequest, "Invalid domain ID")
 		return
 	}
-	if err := h.abuseRepo.UnblockDomain(id); err != nil {
+	if err := h.abuseRepo.UnblockDomain(r.Context(), id); err != nil {
 		response.Error(w, http.StatusNotFound, "Blocked domain not found")
 		return
 	}

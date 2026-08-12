@@ -87,12 +87,47 @@ func ValidateURL(inputURL string) (string, error) {
 		strings.HasSuffix(hostname, ".local") || strings.HasSuffix(hostname, ".internal") {
 		return "", fmt.Errorf("local and internal destinations are not allowed")
 	}
-	if ip := net.ParseIP(hostname); ip != nil && isUnsafeIP(ip) {
-		return "", fmt.Errorf("private and reserved IP destinations are not allowed")
+	if ip := net.ParseIP(hostname); ip != nil {
+		if isUnsafeIP(ip) {
+			return "", fmt.Errorf("private and reserved IP destinations are not allowed")
+		}
+	} else if looksLikeNonCanonicalIPv4(hostname) {
+		return "", fmt.Errorf("non-canonical numeric IP destinations are not allowed")
 	}
 
 	parsed.Host = strings.ToLower(parsed.Host)
 	return parsed.String(), nil
+}
+
+func looksLikeNonCanonicalIPv4(hostname string) bool {
+	parts := strings.Split(hostname, ".")
+	if len(parts) == 0 {
+		return false
+	}
+	for _, part := range parts {
+		if part == "" {
+			return false
+		}
+		digits := part
+		base := 10
+		if strings.HasPrefix(strings.ToLower(part), "0x") {
+			digits = part[2:]
+			base = 16
+		}
+		if digits == "" {
+			return false
+		}
+		for _, char := range digits {
+			valid := char >= '0' && char <= '9'
+			if base == 16 {
+				valid = valid || char >= 'a' && char <= 'f' || char >= 'A' && char <= 'F'
+			}
+			if !valid {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func isUnsafeIP(ip net.IP) bool {

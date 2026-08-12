@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -17,7 +18,9 @@ type Config struct {
 	PublicBaseURL          string   `mapstructure:"PUBLIC_BASE_URL"`
 	FrontendOrigin         string   `mapstructure:"FRONTEND_ORIGIN"`
 	CookieSecure           bool     `mapstructure:"COOKIE_SECURE"`
-	TrustProxyHeaders      bool     `mapstructure:"TRUST_PROXY_HEADERS"`
+	TrustedProxyCIDRs      string   `mapstructure:"TRUSTED_PROXY_CIDRS"`
+	AdminBootstrapToken    string   `mapstructure:"ADMIN_BOOTSTRAP_TOKEN"`
+	RequestTimeout         int      `mapstructure:"REQUEST_TIMEOUT_SECONDS"`
 	AnalyticsSalt          string   `mapstructure:"ANALYTICS_SALT"`
 	ClickSpoolPath         string   `mapstructure:"CLICK_SPOOL_PATH"`
 	MetricsToken           string   `mapstructure:"METRICS_TOKEN"`
@@ -28,12 +31,15 @@ type Config struct {
 }
 
 type Database struct {
-	Host     string `mapstructure:"DATABASE_HOST"`
-	Port     string `mapstructure:"DATABASE_PORT"`
-	User     string `mapstructure:"DATABASE_USER"`
-	Password string `mapstructure:"DATABASE_PASSWORD"`
-	Name     string `mapstructure:"DATABASE_NAME"`
-	SSLMode  string `mapstructure:"DATABASE_SSLMODE"`
+	Host             string `mapstructure:"DATABASE_HOST"`
+	Port             string `mapstructure:"DATABASE_PORT"`
+	User             string `mapstructure:"DATABASE_USER"`
+	Password         string `mapstructure:"DATABASE_PASSWORD"`
+	Name             string `mapstructure:"DATABASE_NAME"`
+	SSLMode          string `mapstructure:"DATABASE_SSLMODE"`
+	ConnectTimeout   int    `mapstructure:"DATABASE_CONNECT_TIMEOUT_SECONDS"`
+	StatementTimeout int    `mapstructure:"DATABASE_STATEMENT_TIMEOUT_MS"`
+	LockTimeout      int    `mapstructure:"DATABASE_LOCK_TIMEOUT_MS"`
 }
 
 func InitConfig() (*Config, error) {
@@ -52,7 +58,9 @@ func InitConfig() (*Config, error) {
 	v.SetDefault("PUBLIC_BASE_URL", "")
 	v.SetDefault("FRONTEND_ORIGIN", "http://localhost:43177")
 	v.SetDefault("COOKIE_SECURE", false)
-	v.SetDefault("TRUST_PROXY_HEADERS", false)
+	v.SetDefault("TRUSTED_PROXY_CIDRS", "")
+	v.SetDefault("ADMIN_BOOTSTRAP_TOKEN", "")
+	v.SetDefault("REQUEST_TIMEOUT_SECONDS", 10)
 	v.SetDefault("ANALYTICS_SALT", "shortli-local-development")
 	v.SetDefault("CLICK_SPOOL_PATH", ".runtime/click-spool")
 	v.SetDefault("METRICS_TOKEN", "")
@@ -65,6 +73,9 @@ func InitConfig() (*Config, error) {
 	v.SetDefault("DATABASE_USER", "")
 	v.SetDefault("DATABASE_PASSWORD", "")
 	v.SetDefault("DATABASE_NAME", "")
+	v.SetDefault("DATABASE_CONNECT_TIMEOUT_SECONDS", 5)
+	v.SetDefault("DATABASE_STATEMENT_TIMEOUT_MS", 5000)
+	v.SetDefault("DATABASE_LOCK_TIMEOUT_MS", 2000)
 
 	if configFile := strings.TrimSpace(os.Getenv("CONFIG_FILE")); configFile != "" {
 		v.SetConfigFile(configFile)
@@ -114,6 +125,27 @@ func (c *Config) validate() error {
 	if c.ShutdownTimeout < 5 || c.ShutdownTimeout > 120 {
 		return fmt.Errorf("SHUTDOWN_TIMEOUT_SECONDS must be between 5 and 120")
 	}
+	if c.RequestTimeout < 1 || c.RequestTimeout > 60 {
+		return fmt.Errorf("REQUEST_TIMEOUT_SECONDS must be between 1 and 60")
+	}
+	if c.Database.ConnectTimeout < 1 || c.Database.ConnectTimeout > 30 {
+		return fmt.Errorf("DATABASE_CONNECT_TIMEOUT_SECONDS must be between 1 and 30")
+	}
+	if c.Database.StatementTimeout < 500 || c.Database.StatementTimeout > 60000 {
+		return fmt.Errorf("DATABASE_STATEMENT_TIMEOUT_MS must be between 500 and 60000")
+	}
+	if c.Database.LockTimeout < 100 || c.Database.LockTimeout > c.Database.StatementTimeout {
+		return fmt.Errorf("DATABASE_LOCK_TIMEOUT_MS must be between 100 and DATABASE_STATEMENT_TIMEOUT_MS")
+	}
+	for _, value := range strings.Split(c.TrustedProxyCIDRs, ",") {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, _, err := net.ParseCIDR(value); err != nil {
+			return fmt.Errorf("TRUSTED_PROXY_CIDRS contains invalid CIDR %q", value)
+		}
+	}
 	if c.AnalyticsRetentionDays < 30 || c.AnalyticsRetentionDays > 3650 {
 		return fmt.Errorf("ANALYTICS_RETENTION_DAYS must be between 30 and 3650")
 	}
@@ -136,6 +168,9 @@ func (c *Config) validate() error {
 		}
 		if len(c.MetricsToken) < 24 {
 			return fmt.Errorf("METRICS_TOKEN must be at least 24 characters in production")
+		}
+		if c.AdminBootstrapToken != "" && len(c.AdminBootstrapToken) < 32 {
+			return fmt.Errorf("ADMIN_BOOTSTRAP_TOKEN must be at least 32 characters in production")
 		}
 	}
 	return nil

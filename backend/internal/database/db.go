@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"time"
@@ -23,9 +24,14 @@ func DBInit(cfg *config.Config) (*Database, error) {
 	}
 	query := databaseURL.Query()
 	query.Set("sslmode", cfg.Database.SSLMode)
+	query.Set("connect_timeout", fmt.Sprintf("%d", cfg.Database.ConnectTimeout))
+	query.Set("statement_timeout", fmt.Sprintf("%d", cfg.Database.StatementTimeout))
+	query.Set("lock_timeout", fmt.Sprintf("%d", cfg.Database.LockTimeout))
 	databaseURL.RawQuery = query.Encode()
 
-	conn, err := sqlx.Connect("pgx", databaseURL.String())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Database.ConnectTimeout)*time.Second)
+	defer cancel()
+	conn, err := sqlx.ConnectContext(ctx, "pgx", databaseURL.String())
 	if err != nil {
 		return nil, fmt.Errorf("can't connect to pg instance, %v", err)
 	}

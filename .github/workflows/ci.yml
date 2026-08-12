@@ -36,6 +36,35 @@ jobs:
       - run: npm run lint
       - run: npm run build
 
+  backend-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: shortli_test
+          POSTGRES_USER: shortli
+          POSTGRES_PASSWORD: shortli-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U shortli -d shortli_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      SHORTLI_TEST_DATABASE_URL: postgres://shortli:shortli-test-password@127.0.0.1:5432/shortli_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - run: go test ./internal/repository -run TestSecurityLifecycleWithPostgres -count=1
+
   containers:
     runs-on: ubuntu-latest
     steps:

@@ -39,7 +39,7 @@ func (r *UrlRepository) Health(ctx context.Context) error {
 	return nil
 }
 
-func (r *UrlRepository) SaveUrl(url *models.URL) (int64, error) {
+func (r *UrlRepository) SaveUrl(ctx context.Context, url *models.URL) (int64, error) {
 	query := `
 		INSERT INTO url_info
 			(original_url, short_code, user_id, click_count, created_at, expires_at, is_active)
@@ -48,7 +48,7 @@ func (r *UrlRepository) SaveUrl(url *models.URL) (int64, error) {
     `
 
 	var id int64
-	err := r.db.QueryRow(
+	err := r.db.QueryRowContext(ctx,
 		query,
 		url.OriginalURL,
 		url.ShortCode,
@@ -69,11 +69,11 @@ func (r *UrlRepository) SaveUrl(url *models.URL) (int64, error) {
 	return id, nil
 }
 
-func (r *UrlRepository) FindAllUrl(limit, offset int) ([]models.URL, error) {
+func (r *UrlRepository) FindAllUrl(ctx context.Context, limit, offset int) ([]models.URL, error) {
 	query := `SELECT ` + urlColumns + ` FROM url_info ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 
 	urls := []models.URL{}
-	err := r.db.Select(&urls, query, limit, offset)
+	err := r.db.SelectContext(ctx, &urls, query, limit, offset)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -85,7 +85,7 @@ func (r *UrlRepository) FindAllUrl(limit, offset int) ([]models.URL, error) {
 	return urls, nil
 }
 
-func (r *UrlRepository) FindUrlsByUserID(userID int, limit, offset int) ([]models.URL, error) {
+func (r *UrlRepository) FindUrlsByUserID(ctx context.Context, userID int, limit, offset int) ([]models.URL, error) {
 	query := `SELECT ` + urlColumns + `
 		FROM url_info
 		WHERE user_id = $1
@@ -93,7 +93,7 @@ func (r *UrlRepository) FindUrlsByUserID(userID int, limit, offset int) ([]model
 		LIMIT $2 OFFSET $3`
 
 	urls := []models.URL{}
-	err := r.db.Select(&urls, query, userID, limit, offset)
+	err := r.db.SelectContext(ctx, &urls, query, userID, limit, offset)
 
 	if err != nil {
 		return nil, fmt.Errorf("select user urls error: %v", err)
@@ -102,9 +102,9 @@ func (r *UrlRepository) FindUrlsByUserID(userID int, limit, offset int) ([]model
 	return urls, nil
 }
 
-func (r *UrlRepository) GetTotalUrlsByUserID(userID int) (int, error) {
+func (r *UrlRepository) GetTotalUrlsByUserID(ctx context.Context, userID int) (int, error) {
 	var count int
-	err := r.db.QueryRow(`
+	err := r.db.QueryRowContext(ctx, `
         SELECT COUNT(*) 
         FROM url_info 
         WHERE user_id = $1
@@ -117,18 +117,18 @@ func (r *UrlRepository) GetTotalUrlsByUserID(userID int) (int, error) {
 	return count, nil
 }
 
-func (r *UrlRepository) GetTotalClicks() (int, error) {
+func (r *UrlRepository) GetTotalClicks(ctx context.Context) (int, error) {
 	var total int
-	err := r.db.QueryRow("SELECT COALESCE(SUM(click_count), 0) FROM url_info").Scan(&total)
+	err := r.db.QueryRowContext(ctx, "SELECT COALESCE(SUM(click_count), 0) FROM url_info").Scan(&total)
 	if err != nil {
 		return 0, fmt.Errorf("get total clicks error: %v", err)
 	}
 	return total, nil
 }
 
-func (r *UrlRepository) GetTotalUrls() (int, error) {
+func (r *UrlRepository) GetTotalUrls(ctx context.Context) (int, error) {
 	var count int
-	err := r.db.QueryRow("SELECT COUNT(*) FROM url_info").Scan(&count)
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM url_info").Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("count error: %w", err)
 	}
@@ -136,9 +136,9 @@ func (r *UrlRepository) GetTotalUrls() (int, error) {
 	return count, nil
 }
 
-func (r *UrlRepository) FindUrlByCode(code string) (*models.URL, error) {
+func (r *UrlRepository) FindUrlByCode(ctx context.Context, code string) (*models.URL, error) {
 	url := &models.URL{}
-	err := r.db.Get(url, `SELECT `+urlColumns+` FROM url_info WHERE short_code = $1`, code)
+	err := r.db.GetContext(ctx, url, `SELECT `+urlColumns+` FROM url_info WHERE short_code = $1`, code)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -150,9 +150,9 @@ func (r *UrlRepository) FindUrlByCode(code string) (*models.URL, error) {
 	return url, nil
 }
 
-func (r *UrlRepository) FindUrlByOriginalUrl(originalUrl string) (*models.URL, error) {
+func (r *UrlRepository) FindUrlByOriginalUrl(ctx context.Context, originalUrl string) (*models.URL, error) {
 	url := &models.URL{}
-	err := r.db.Get(url, `SELECT `+urlColumns+` FROM url_info WHERE original_url = $1 ORDER BY created_at DESC LIMIT 1`, originalUrl)
+	err := r.db.GetContext(ctx, url, `SELECT `+urlColumns+` FROM url_info WHERE original_url = $1 ORDER BY created_at DESC LIMIT 1`, originalUrl)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -164,8 +164,8 @@ func (r *UrlRepository) FindUrlByOriginalUrl(originalUrl string) (*models.URL, e
 	return url, nil
 }
 
-func (r *UrlRepository) UpdateUrlSettings(code string, isActive bool, expiresAt *time.Time) error {
-	result, err := r.db.Exec(`
+func (r *UrlRepository) UpdateUrlSettings(ctx context.Context, code string, isActive bool, expiresAt *time.Time) error {
+	result, err := r.db.ExecContext(ctx, `
 		UPDATE url_info
 		SET is_active = $1, expires_at = $2
 		WHERE short_code = $3
@@ -187,7 +187,7 @@ func (r *UrlRepository) UpdateUrlSettings(code string, isActive bool, expiresAt 
 	return nil
 }
 
-func (r *UrlRepository) DeleteUrlByCode(code string) error {
+func (r *UrlRepository) DeleteUrlByCode(ctx context.Context, code string) error {
 	query := `
         DELETE FROM url_info 
         WHERE short_code = $1
@@ -195,7 +195,7 @@ func (r *UrlRepository) DeleteUrlByCode(code string) error {
     `
 
 	var deletedID int64
-	err := r.db.QueryRow(query, code).Scan(&deletedID)
+	err := r.db.QueryRowContext(ctx, query, code).Scan(&deletedID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -207,8 +207,8 @@ func (r *UrlRepository) DeleteUrlByCode(code string) error {
 	return nil
 }
 
-func (r *UrlRepository) DeactivateExpiredUrls() (int64, error) {
-	result, err := r.db.Exec(`
+func (r *UrlRepository) DeactivateExpiredUrls(ctx context.Context) (int64, error) {
+	result, err := r.db.ExecContext(ctx, `
 		UPDATE url_info
 		SET is_active = FALSE
 		WHERE is_active = TRUE AND expires_at IS NOT NULL AND expires_at <= NOW()
@@ -219,7 +219,7 @@ func (r *UrlRepository) DeactivateExpiredUrls() (int64, error) {
 	return result.RowsAffected()
 }
 
-func (r *UrlRepository) SearchUrls(query string, limit, offset int) ([]models.URL, error) {
+func (r *UrlRepository) SearchUrls(ctx context.Context, query string, limit, offset int) ([]models.URL, error) {
 	searchQuery := `SELECT ` + urlColumns + `
 		FROM url_info
         WHERE original_url ILIKE $1 OR short_code ILIKE $2
@@ -229,7 +229,7 @@ func (r *UrlRepository) SearchUrls(query string, limit, offset int) ([]models.UR
 
 	urls := []models.URL{}
 	searchPattern := "%" + query + "%"
-	err := r.db.Select(&urls, searchQuery, searchPattern, searchPattern, limit, offset)
+	err := r.db.SelectContext(ctx, &urls, searchQuery, searchPattern, searchPattern, limit, offset)
 
 	if err != nil {
 		return nil, fmt.Errorf("search error: %v", err)
@@ -263,20 +263,20 @@ func (r *UrlRepository) RecordClickContext(ctx context.Context, event *models.Cl
 	return nil
 }
 
-func (r *UrlRepository) GetAnalytics(urlID int, since time.Time) (models.AnalyticsSummary, error) {
+func (r *UrlRepository) GetAnalytics(ctx context.Context, urlID int, since time.Time) (models.AnalyticsSummary, error) {
 	result := models.AnalyticsSummary{
 		Daily: []models.AnalyticsBucket{}, Devices: []models.AnalyticsBucket{},
 		Browsers: []models.AnalyticsBucket{}, OperatingSystems: []models.AnalyticsBucket{},
 		Referrers: []models.AnalyticsBucket{}, Countries: []models.AnalyticsBucket{},
 	}
-	if err := r.db.QueryRow(`
+	if err := r.db.QueryRowContext(ctx, `
 		SELECT COUNT(*), COUNT(DISTINCT NULLIF(ip_hash, ''))
 		FROM click_event WHERE url_id = $1 AND clicked_at >= $2
 	`, urlID, since).Scan(&result.TotalClicks, &result.UniqueClicks); err != nil {
 		return result, fmt.Errorf("analytics totals: %w", err)
 	}
 
-	if err := r.db.Select(&result.Daily, `
+	if err := r.db.SelectContext(ctx, &result.Daily, `
 		SELECT TO_CHAR(clicked_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS label, COUNT(*) AS count
 		FROM click_event WHERE url_id = $1 AND clicked_at >= $2
 		GROUP BY label ORDER BY label
@@ -285,25 +285,25 @@ func (r *UrlRepository) GetAnalytics(urlID int, since time.Time) (models.Analyti
 	}
 
 	var err error
-	if result.Devices, err = r.analyticsBreakdown(urlID, since, "device_type"); err != nil {
+	if result.Devices, err = r.analyticsBreakdown(ctx, urlID, since, "device_type"); err != nil {
 		return result, err
 	}
-	if result.Browsers, err = r.analyticsBreakdown(urlID, since, "browser"); err != nil {
+	if result.Browsers, err = r.analyticsBreakdown(ctx, urlID, since, "browser"); err != nil {
 		return result, err
 	}
-	if result.OperatingSystems, err = r.analyticsBreakdown(urlID, since, "os"); err != nil {
+	if result.OperatingSystems, err = r.analyticsBreakdown(ctx, urlID, since, "os"); err != nil {
 		return result, err
 	}
-	if result.Referrers, err = r.analyticsBreakdown(urlID, since, "referrer_host"); err != nil {
+	if result.Referrers, err = r.analyticsBreakdown(ctx, urlID, since, "referrer_host"); err != nil {
 		return result, err
 	}
-	if result.Countries, err = r.analyticsBreakdown(urlID, since, "country_code"); err != nil {
+	if result.Countries, err = r.analyticsBreakdown(ctx, urlID, since, "country_code"); err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
-func (r *UrlRepository) analyticsBreakdown(urlID int, since time.Time, column string) ([]models.AnalyticsBucket, error) {
+func (r *UrlRepository) analyticsBreakdown(ctx context.Context, urlID int, since time.Time, column string) ([]models.AnalyticsBucket, error) {
 	allowed := map[string]bool{"device_type": true, "browser": true, "os": true, "referrer_host": true, "country_code": true}
 	if !allowed[column] {
 		return nil, fmt.Errorf("unsupported analytics dimension")
@@ -314,16 +314,16 @@ func (r *UrlRepository) analyticsBreakdown(urlID int, since time.Time, column st
 		FROM click_event WHERE url_id = $1 AND clicked_at >= $2
 		GROUP BY label ORDER BY count DESC, label LIMIT 8
 	`, column)
-	if err := r.db.Select(&items, query, urlID, since); err != nil {
+	if err := r.db.SelectContext(ctx, &items, query, urlID, since); err != nil {
 		return nil, fmt.Errorf("analytics breakdown %s: %w", column, err)
 	}
 	return items, nil
 }
 
-func (r *UrlRepository) GetTotalSearchUrls(query string) (int, error) {
+func (r *UrlRepository) GetTotalSearchUrls(ctx context.Context, query string) (int, error) {
 	var count int
 	searchPattern := "%" + query + "%"
-	err := r.db.QueryRow(`
+	err := r.db.QueryRowContext(ctx, `
         SELECT COUNT(*) 
         FROM url_info 
         WHERE original_url ILIKE $1 OR short_code ILIKE $2

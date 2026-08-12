@@ -21,7 +21,7 @@ func NewHandler(repo *repository.APIKeyRepository) *Handler { return &Handler{re
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	user := middleware.GetUserFromContext(r)
-	keys, err := h.repo.List(user.ID)
+	keys, err := h.repo.List(r.Context(), user.ID)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to load API keys")
 		return
@@ -44,7 +44,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusBadRequest, "API key name must be between 2 and 60 characters")
 		return
 	}
-	count, err := h.repo.CountActive(user.ID)
+	count, err := h.repo.CountActive(r.Context(), user.ID)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to check API key limit")
 		return
@@ -59,7 +59,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	key := &models.APIKey{UserID: user.ID, Name: req.Name, Prefix: prefix, Hash: hash}
-	if err := h.repo.Create(key); err != nil {
+	if err := h.repo.Create(r.Context(), key); err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to save API key")
 		return
 	}
@@ -73,7 +73,7 @@ func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusBadRequest, "Invalid API key ID")
 		return
 	}
-	if err := h.repo.Revoke(id, user.ID); err != nil {
+	if err := h.repo.Revoke(r.Context(), id, user.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.Error(w, http.StatusNotFound, "API key not found")
 			return

@@ -25,6 +25,7 @@ type MetricsRegistry struct {
 	mu        sync.RWMutex
 	requests  map[metricKey]uint64
 	durations map[metricKey]time.Duration
+	resolver  *ClientIPResolver
 }
 
 type ClickQueueMetrics struct {
@@ -34,11 +35,12 @@ type ClickQueueMetrics struct {
 	Retried  int64
 }
 
-func NewMetricsRegistry() *MetricsRegistry {
+func NewMetricsRegistry(resolver *ClientIPResolver) *MetricsRegistry {
 	return &MetricsRegistry{
 		startedAt: time.Now(),
 		requests:  make(map[metricKey]uint64),
 		durations: make(map[metricKey]time.Duration),
+		resolver:  resolver,
 	}
 }
 
@@ -66,7 +68,7 @@ func (m *MetricsRegistry) Middleware(next http.Handler) http.Handler {
 		log.Printf(
 			"request_id=%s method=%s pattern=%q status=%d duration_ms=%d remote_ip=%s",
 			requestID, r.Method, pattern, recorder.status, duration.Milliseconds(),
-			GetClientIP(r, false),
+			m.resolver.Resolve(r),
 		)
 	})
 }

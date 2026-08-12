@@ -54,6 +54,12 @@ func applyMigration(ctx context.Context, db *sqlx.DB, version string) error {
 		return fmt.Errorf("begin migration %s: %w", version, err)
 	}
 	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `SET LOCAL statement_timeout = '55s'`); err != nil {
+		return fmt.Errorf("configure migration timeout %s: %w", version, err)
+	}
+	if _, err := tx.ExecContext(ctx, `SET LOCAL lock_timeout = '10s'`); err != nil {
+		return fmt.Errorf("configure migration lock timeout %s: %w", version, err)
+	}
 
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock($1)`, migrationLockID); err != nil {
 		return fmt.Errorf("lock migration %s: %w", version, err)

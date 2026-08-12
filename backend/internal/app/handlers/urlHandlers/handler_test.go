@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/J0es1ick/shortli/internal/app/middleware"
 	"github.com/J0es1ick/shortli/internal/config"
 	"github.com/J0es1ick/shortli/internal/models"
 )
@@ -23,8 +24,12 @@ func TestShortURLUsesConfiguredPublicBase(t *testing.T) {
 }
 
 func TestShortURLFallsBackToForwardedRequestHost(t *testing.T) {
-	handler := &Handler{cfg: &config.Config{TrustProxyHeaders: true}}
+	handler := &Handler{
+		cfg:      &config.Config{},
+		clientIP: middleware.NewClientIPResolver("192.0.2.0/24"),
+	}
 	request := httptest.NewRequest("GET", "http://internal:8088/", nil)
+	request.RemoteAddr = "192.0.2.10:8080"
 	request.Host = "sho.rt"
 	request.Header.Set("X-Forwarded-Proto", "https")
 

@@ -57,7 +57,7 @@ go run .
 PUBLIC_BASE_URL=https://go.example.com
 FRONTEND_ORIGIN=https://example.com
 COOKIE_SECURE=true
-TRUST_PROXY_HEADERS=true
+TRUSTED_PROXY_CIDRS=172.16.0.0/12
 ANALYTICS_SALT=replace-with-a-long-random-secret
 
 # frontend/.env.production

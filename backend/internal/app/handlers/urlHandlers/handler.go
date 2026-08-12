@@ -31,6 +31,7 @@ type Handler struct {
 	abuseRepository *repository.AbuseRepository
 	redirectCache   *redirectCache
 	clickRecorder   *tasks.ClickRecorder
+	clientIP        *middleware.ClientIPResolver
 }
 
 func NewHandler(
@@ -38,6 +39,7 @@ func NewHandler(
 	urlRepository *repository.UrlRepository,
 	abuseRepository *repository.AbuseRepository,
 	clickRecorder *tasks.ClickRecorder,
+	clientIP *middleware.ClientIPResolver,
 ) *Handler {
 	return &Handler{
 		cfg:             cfg,
@@ -45,6 +47,7 @@ func NewHandler(
 		abuseRepository: abuseRepository,
 		redirectCache:   newRedirectCache(5*time.Minute, 10_000),
 		clickRecorder:   clickRecorder,
+		clientIP:        clientIP,
 	}
 }
 
@@ -54,7 +57,7 @@ func (h *Handler) shortURL(r *http.Request, shortCode string) string {
 	}
 
 	protocol := ""
-	if h.cfg.TrustProxyHeaders {
+	if h.clientIP != nil && h.clientIP.Trusts(r) {
 		protocol = r.Header.Get("X-Forwarded-Proto")
 	}
 	if protocol == "" {
@@ -166,7 +169,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusBadRequest, "Invalid destination URL")
 		return
 	}
-	blocked, err := h.abuseRepository.IsDomainBlocked(parsedDestination.Hostname())
+	blocked, err := h.abuseRepository.IsDomainBlocked(r.Context(), parsedDestination.Hostname())
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to validate destination domain")
 		return
@@ -200,7 +203,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 
 	var shortCode string
 	if customAlias != "" {
-		existingURL, lookupErr := h.urlRepository.FindUrlByCode(customAlias)
+		existingURL, lookupErr := h.urlRepository.FindUrlByCode(r.Context(), customAlias)
 		if lookupErr == nil {
 			_ = existingURL
 			response.Error(w, http.StatusConflict, "Custom alias is already in use")
@@ -218,7 +221,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 				shortCode = ""
 				continue
 			}
-			existingURLByCode, codeErr := h.urlRepository.FindUrlByCode(shortCode)
+			existingURLByCode, codeErr := h.urlRepository.FindUrlByCode(r.Context(), shortCode)
 			if codeErr != nil && strings.Contains(codeErr.Error(), "url not found") {
 				break
 			}
@@ -245,7 +248,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		IsActive:    true,
 	}
 
-	id, err := h.urlRepository.SaveUrl(url)
+	id, err := h.urlRepository.SaveUrl(r.Context(), url)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			if customAlias != "" {
@@ -288,13 +291,13 @@ func (h *Handler) UserHistory(w http.ResponseWriter, r *http.Request) {
 
 	offset := (page - 1) * limit
 
-	urls, err := h.urlRepository.FindUrlsByUserID(user.ID, limit, offset)
+	urls, err := h.urlRepository.FindUrlsByUserID(r.Context(), user.ID, limit, offset)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to get user history")
 		return
 	}
 
-	total, err := h.urlRepository.GetTotalUrlsByUserID(user.ID)
+	total, err := h.urlRepository.GetTotalUrlsByUserID(r.Context(), user.ID)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to get total count")
 		return
@@ -358,13 +361,13 @@ func (h *Handler) SearchUrls(w http.ResponseWriter, r *http.Request) {
 
 	offset := (page - 1) * limit
 
-	urls, err := h.urlRepository.SearchUrls(query, limit, offset)
+	urls, err := h.urlRepository.SearchUrls(r.Context(), query, limit, offset)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Search failed")
 		return
 	}
 
-	total, err := h.urlRepository.GetTotalSearchUrls(query)
+	total, err := h.urlRepository.GetTotalSearchUrls(r.Context(), query)
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to get total count")
 		return
@@ -388,13 +391,13 @@ func (h *Handler) AdminStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	totalURLs, err := h.urlRepository.GetTotalUrls()
+	totalURLs, err := h.urlRepository.GetTotalUrls(r.Context())
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to get URLs count")
 		return
 	}
 
-	totalClicks, err := h.urlRepository.GetTotalClicks()
+	totalClicks, err := h.urlRepository.GetTotalClicks(r.Context())
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to get clicks count")
 		return
@@ -420,7 +423,7 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	url, cacheHit := h.redirectCache.Get(shortCode)
 	if !cacheHit {
 		var err error
-		url, err = h.urlRepository.FindUrlByCode(shortCode)
+		url, err = h.urlRepository.FindUrlByCode(r.Context(), shortCode)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				response.Error(w, http.StatusNotFound, "URL not found")
@@ -496,7 +499,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		expiresAt = req.ExpiresAt
 	}
 
-	if err := h.urlRepository.UpdateUrlSettings(shortCode, isActive, expiresAt); err != nil {
+	if err := h.urlRepository.UpdateUrlSettings(r.Context(), shortCode, isActive, expiresAt); err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to update link")
 		return
 	}
@@ -519,7 +522,7 @@ func (h *Handler) Analytics(w http.ResponseWriter, r *http.Request) {
 	if days > 365 {
 		days = 365
 	}
-	analytics, err := h.urlRepository.GetAnalytics(url.ID, time.Now().AddDate(0, 0, -days))
+	analytics, err := h.urlRepository.GetAnalytics(r.Context(), url.ID, time.Now().AddDate(0, 0, -days))
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to load analytics")
 		return
@@ -535,7 +538,7 @@ func (h *Handler) ownedURL(w http.ResponseWriter, r *http.Request, shortCode str
 		response.Error(w, http.StatusUnauthorized, "Authentication required")
 		return nil, nil, false
 	}
-	url, err := h.urlRepository.FindUrlByCode(shortCode)
+	url, err := h.urlRepository.FindUrlByCode(r.Context(), shortCode)
 	if err != nil {
 		response.Error(w, http.StatusNotFound, "URL not found")
 		return nil, nil, false
@@ -583,7 +586,7 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	offset := (page - 1) * limit
 
-	urls, err := h.urlRepository.FindAllUrl(limit, offset)
+	urls, err := h.urlRepository.FindAllUrl(r.Context(), limit, offset)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			response.Error(w, http.StatusNotFound, "URL not found")
@@ -593,7 +596,7 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	total, err := h.urlRepository.GetTotalUrls()
+	total, err := h.urlRepository.GetTotalUrls(r.Context())
 	if err != nil {
 		response.Error(w, http.StatusInternalServerError, "Failed to get total count")
 		return
@@ -624,7 +627,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	if !strings.HasPrefix(r.URL.Path, "/api/admin/") {
 		user := middleware.GetUserFromContext(r)
-		url, err := h.urlRepository.FindUrlByCode(shortCode)
+		url, err := h.urlRepository.FindUrlByCode(r.Context(), shortCode)
 		if err != nil {
 			response.Error(w, http.StatusNotFound, "URL not found")
 			return
@@ -635,7 +638,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := h.urlRepository.DeleteUrlByCode(shortCode); err != nil {
+	if err := h.urlRepository.DeleteUrlByCode(r.Context(), shortCode); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			response.Error(w, http.StatusNotFound, "URL not found")
 		} else {

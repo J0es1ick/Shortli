@@ -24,21 +24,22 @@ func SetupRoutes(
 	abuseRepo *repository.AbuseRepository,
 	clickRecorder *tasks.ClickRecorder,
 	metrics *middleware.MetricsRegistry,
+	clientIP *middleware.ClientIPResolver,
 ) http.Handler {
 	mux := http.NewServeMux()
 
-	urlHandler := urlHandlers.NewHandler(cfg, urlRepository, abuseRepo, clickRecorder)
-	authHandler := authHandlers.NewAuthHandler(userRepo, sessionRepo, cfg.CookieSecure)
-	userHandler := userHandlers.NewUserHandler(userRepo)
+	urlHandler := urlHandlers.NewHandler(cfg, urlRepository, abuseRepo, clickRecorder, clientIP)
+	authHandler := authHandlers.NewAuthHandler(userRepo, sessionRepo, cfg.CookieSecure, cfg.AdminBootstrapToken)
+	userHandler := userHandlers.NewUserHandler(userRepo, urlHandler.InvalidateRedirect, cfg.CookieSecure)
 	developerHandler := developerHandlers.NewHandler(apiKeyRepo)
 	abuseHandler := abuseHandlers.NewHandler(
 		abuseRepo, urlRepository, cfg.AnalyticsSalt,
-		cfg.TrustProxyHeaders, urlHandler.InvalidateRedirect,
+		clientIP, urlHandler.InvalidateRedirect,
 	)
 	apiKeyAuth := middleware.NewAPIKeyAuth(apiKeyRepo, userRepo, 120, time.Minute)
-	shortenLimiter := middleware.NewRateLimiter(60, time.Hour, cfg.TrustProxyHeaders)
-	reportLimiter := middleware.NewRateLimiter(5, time.Hour, cfg.TrustProxyHeaders)
-	authLimiter := middleware.NewRateLimiter(20, 15*time.Minute, cfg.TrustProxyHeaders)
+	shortenLimiter := middleware.NewRateLimiter(60, time.Hour, clientIP)
+	reportLimiter := middleware.NewRateLimiter(5, time.Hour, clientIP)
+	authLimiter := middleware.NewRateLimiter(20, 15*time.Minute, clientIP)
 
 	mux.HandleFunc("GET /", urlHandler.Home)
 	mux.HandleFunc("GET /api/health", urlHandler.Health)
@@ -57,6 +58,7 @@ func SetupRoutes(
 	mux.HandleFunc("GET /{shortCode}", urlHandler.Redirect)
 
 	mux.Handle("POST /api/register", authLimiter.Middleware(http.HandlerFunc(authHandler.Register)))
+	mux.Handle("POST /api/admin/bootstrap", authLimiter.Middleware(http.HandlerFunc(authHandler.Bootstrap)))
 	mux.Handle("POST /api/login", authLimiter.Middleware(http.HandlerFunc(authHandler.Login)))
 	mux.HandleFunc("POST /api/logout", authHandler.Logout)
 	mux.HandleFunc("GET /api/me", authHandler.Me)
@@ -100,6 +102,7 @@ func SetupRoutes(
 			cfg.FrontendOrigin,
 		),
 	)
+	handler = middleware.RequestTimeout(time.Duration(cfg.RequestTimeout)*time.Second, handler)
 
 	return handler
 }

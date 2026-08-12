@@ -43,6 +43,10 @@ func TestValidateURLRejectsUnsafeDestinations(t *testing.T) {
 		"http://192.168.1.12/device",
 		"https://user:password@example.com",
 		"file:///etc/passwd",
+		"http://2130706433/private",
+		"http://0x7f000001/private",
+		"http://0177.0.0.1/private",
+		"http://127.1/private",
 	}
 	for _, value := range tests {
 		if _, err := ValidateURL(value); err == nil {
