@@ -1,17 +1,19 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useUser } from "../../context/UserContext";
+import { apiUrl, buildShortUrl } from "../../lib/urls";
+import ShareModal from "../UI/shareModal/shareModal";
+import LinkDetailsModal, {
+  type ManagedLink,
+} from "../UI/linkDetailsModal/linkDetailsModal";
 import styles from "./userHistory.module.css";
+import { useLocale } from "../../context/LocaleContext";
 
-interface URL {
-  url_id: number;
-  original_url: string;
-  short_code: string;
-  click_count: number;
-  created_at: string;
+interface ShortURL extends ManagedLink {
+  qr_code_base64: string;
 }
 
 interface HistoryResponse {
-  data: URL[];
+  data: ShortURL[];
   meta: {
     total: number;
     page: number;
@@ -20,184 +22,288 @@ interface HistoryResponse {
   };
 }
 
+const limit = 8;
+
 export default function UserHistory() {
   const { user } = useUser();
-  const [urls, setUrls] = useState<URL[]>([]);
+  const { locale, t, formatDate, formatNumber } = useLocale();
+  const [urls, setUrls] = useState<ShortURL[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const limit = 10;
+  const [copiedCode, setCopiedCode] = useState("");
+  const [pendingDelete, setPendingDelete] = useState("");
+  const [deletingCode, setDeletingCode] = useState("");
+  const [shareItem, setShareItem] = useState<ShortURL | null>(null);
+  const [detailsItem, setDetailsItem] = useState<ShortURL | null>(null);
 
-  const fetchUserHistory = async () => {
+  const fetchUserHistory = useCallback(async () => {
     if (!user) return;
-
     setLoading(true);
     setError("");
 
     try {
       const response = await fetch(
-        `http://localhost:8088/api/history?page=${page}&limit=${limit}`,
-        {
-          credentials: "include",
-        }
+        apiUrl(`/api/history?page=${page}&limit=${limit}`),
+        { credentials: "include" },
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch history");
-      }
+      if (!response.ok) throw new Error(t("history.loadError"));
 
       const data: HistoryResponse = await response.json();
       setUrls(data.data);
-      setTotalPages(data.meta.totalPages);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setTotalPages(Math.max(1, data.meta.totalPages));
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : t("history.loadError"),
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, t, user]);
 
   useEffect(() => {
-    fetchUserHistory();
-  }, [user, page]);
+    void fetchUserHistory();
+  }, [fetchUserHistory]);
 
-  const calculateTimeUntilDeletion = (createdAt: string): string => {
-    const created = new Date(createdAt);
-    const deletionDate = new Date(created);
-    deletionDate.setMonth(deletionDate.getMonth() + 1);
+  useEffect(() => {
+    const refresh = () => {
+      if (page === 1) void fetchUserHistory();
+      else setPage(1);
+    };
+    window.addEventListener("shortli:url-created", refresh);
+    return () => window.removeEventListener("shortli:url-created", refresh);
+  }, [fetchUserHistory, page]);
 
-    const now = new Date();
-    const diffTime = deletionDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays <= 0) {
-      return "Expires today";
-    } else if (diffDays === 1) {
-      return "1 day left";
-    } else if (diffDays <= 7) {
-      return `${diffDays} days left`;
-    } else {
-      const weeks = Math.ceil(diffDays / 7);
-      return `${weeks} week${weeks > 1 ? "s" : ""} left`;
+  const copyLink = async (item: ShortURL) => {
+    try {
+      await navigator.clipboard.writeText(
+        buildShortUrl(item.short_code, item.short_url),
+      );
+      setCopiedCode(item.short_code);
+      window.setTimeout(() => setCopiedCode(""), 1600);
+    } catch {
+      setError(t("history.clipboardUnavailable"));
     }
   };
 
-  const getExpirationClass = (createdAt: string): string => {
-    const created = new Date(createdAt);
-    const deletionDate = new Date(created);
-    deletionDate.setMonth(deletionDate.getMonth() + 1);
+  const deleteLink = async (shortCode: string) => {
+    setDeletingCode(shortCode);
+    setError("");
+    try {
+      const response = await fetch(apiUrl(`/api/urls/${shortCode}`), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error(t("history.deleteError"));
+      setPendingDelete("");
+      if (urls.length === 1 && page > 1) setPage((current) => current - 1);
+      else await fetchUserHistory();
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : t("history.deleteError"),
+      );
+    } finally {
+      setDeletingCode("");
+    }
+  };
 
-    const now = new Date();
-    const diffTime = deletionDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const getExpiration = (item: ShortURL) => {
+    if (!item.is_active) return { label: t("history.paused"), urgent: true };
+    if (!item.expires_at)
+      return { label: t("history.neverExpires"), urgent: false };
+    const deletionDate = new Date(item.expires_at);
+    const days = Math.ceil(
+      (deletionDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
+    if (days <= 0) return { label: t("history.expired"), urgent: true };
+    if (days === 1) return { label: t("history.oneDayLeft"), urgent: true };
+    if (days <= 7)
+      return { label: t("history.daysLeft", { count: days }), urgent: true };
+    return { label: t("history.daysLeft", { count: days }), urgent: false };
+  };
 
-    if (diffDays <= 3) return styles.expiring_soon;
-    if (diffDays <= 7) return styles.expiring;
-    return styles.normal;
+  const getClickLabel = (count: number) => {
+    if (locale === "en")
+      return count === 1 ? t("history.click") : t("history.clicks");
+    const lastTwoDigits = count % 100;
+    const lastDigit = count % 10;
+    if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return t("history.clicks");
+    if (lastDigit === 1) return t("history.click");
+    if (lastDigit >= 2 && lastDigit <= 4) return t("history.clickFew");
+    return t("history.clicks");
   };
 
   if (loading) {
-    return <div className={styles.loading}>Loading your history...</div>;
+    return (
+      <div className={styles.loading} aria-live="polite">
+        <i />
+        <span>{t("history.loading")}</span>
+      </div>
+    );
   }
 
-  if (error) {
+  if (error && urls.length === 0) {
     return (
-      <div className={styles.error}>
+      <div className={styles.error_state}>
         <p>{error}</p>
-        <button onClick={fetchUserHistory}>Retry</button>
+        <button type="button" onClick={() => void fetchUserHistory()}>
+          {t("common.tryAgain")}
+        </button>
+      </div>
+    );
+  }
+
+  if (urls.length === 0) {
+    return (
+      <div className={styles.empty_state}>
+        <span>{t("history.emptyLabel")}</span>
+        <p>{t("history.empty")}</p>
       </div>
     );
   }
 
   return (
     <div className={styles.user_history}>
-      <h2 className={styles.title}>Your Link History</h2>
-
-      {urls.length === 0 ? (
-        <div className={styles.empty_state}>
-          <p>You haven't created any shortened links yet.</p>
-          <p>Start by shortening your first URL above!</p>
-        </div>
-      ) : (
-        <>
-          <div className={styles.history_list}>
-            {urls.map((url, index) => (
-              <div key={url.url_id} className={styles.history_item}>
-                <div className={styles.item_header}>
-                  <span className={styles.item_number}>
-                    {(page - 1) * limit + index + 1}
-                  </span>
-                  <span
-                    className={`${styles.expiration} ${getExpirationClass(
-                      url.created_at
-                    )}`}
-                  >
-                    {calculateTimeUntilDeletion(url.created_at)}
-                  </span>
-                </div>
-
-                <div className={styles.url_info}>
-                  <div className={styles.original_url}>
-                    <a
-                      href={url.original_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={url.original_url}
-                    >
-                      {url.original_url.length > 60
-                        ? `${url.original_url.substring(0, 60)}...`
-                        : url.original_url}
-                    </a>
-                  </div>
-
-                  <div className={styles.short_url}>
-                    <a
-                      href={`http://localhost:8088/${url.short_code}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      shortli/{url.short_code}
-                    </a>
-                    <span className={styles.clicks}>
-                      {url.click_count} clicks
-                    </span>
-                  </div>
-
-                  <div className={styles.created_date}>
-                    Created: {new Date(url.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <div className={styles.pagination}>
-              <button
-                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                disabled={page === 1}
-                className={styles.pagination_button}
-              >
-                Previous
-              </button>
-
-              <span className={styles.page_info}>
-                Page {page} of {totalPages}
-              </span>
-
-              <button
-                onClick={() =>
-                  setPage((prev) => Math.min(prev + 1, totalPages))
-                }
-                disabled={page === totalPages}
-                className={styles.pagination_button}
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </>
+      {error && (
+        <p className={styles.inline_error} role="alert">
+          {error}
+        </p>
       )}
+      <div className={styles.history_header} aria-hidden="true">
+        <span>{t("history.link")}</span>
+        <span>{t("history.activity")}</span>
+        <span>{t("history.actions")}</span>
+      </div>
+      <div className={styles.history_list}>
+        {urls.map((item, index) => {
+          const shortUrl = buildShortUrl(item.short_code, item.short_url);
+          const expiration = getExpiration(item);
+          return (
+            <article key={item.url_id} className={styles.history_item}>
+              <div className={styles.item_index}>
+                {String((page - 1) * limit + index + 1).padStart(2, "0")}
+              </div>
+              <div className={styles.link_info}>
+                <a href={shortUrl} target="_blank" rel="noopener noreferrer">
+                  {shortUrl.replace(/^https?:\/\//, "")}
+                </a>
+                <a
+                  href={item.original_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.original_url}
+                  title={item.original_url}
+                >
+                  {item.original_url}
+                </a>
+              </div>
+              <div className={styles.activity}>
+                <strong>{formatNumber(item.click_count ?? 0)}</strong>
+                <span>{getClickLabel(item.click_count ?? 0)}</span>
+              </div>
+              <div className={styles.date_info}>
+                <time dateTime={item.created_at}>
+                  {formatDate(item.created_at, {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </time>
+                <span className={expiration.urgent ? styles.urgent : ""}>
+                  {expiration.label}
+                </span>
+              </div>
+              <div className={styles.item_actions}>
+                {pendingDelete === item.short_code ? (
+                  <div className={styles.delete_confirm}>
+                    <button
+                      type="button"
+                      onClick={() => void deleteLink(item.short_code)}
+                      disabled={deletingCode === item.short_code}
+                    >
+                      {deletingCode === item.short_code
+                        ? t("history.deleting")
+                        : t("common.confirm")}
+                    </button>
+                    <button type="button" onClick={() => setPendingDelete("")}>
+                      {t("common.cancel")}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => void copyLink(item)}>
+                      {copiedCode === item.short_code
+                        ? t("common.copied")
+                        : t("common.copy")}
+                    </button>
+                    <button type="button" onClick={() => setShareItem(item)}>
+                      {t("common.share")}
+                    </button>
+                    <button type="button" onClick={() => setDetailsItem(item)}>
+                      {t("history.manage")}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.delete_button}
+                      onClick={() => setPendingDelete(item.short_code)}
+                    >
+                      {t("common.delete")}
+                    </button>
+                  </>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {totalPages > 1 && (
+        <nav className={styles.pagination} aria-label={t("history.pages")}>
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.max(current - 1, 1))}
+            disabled={page === 1}
+          >
+            {t("history.previous")}
+          </button>
+          <span>
+            {String(page).padStart(2, "0")} /{" "}
+            {String(totalPages).padStart(2, "0")}
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              setPage((current) => Math.min(current + 1, totalPages))
+            }
+            disabled={page === totalPages}
+          >
+            {t("history.next")}
+          </button>
+        </nav>
+      )}
+
+      <ShareModal
+        isOpen={Boolean(shareItem)}
+        onClose={() => setShareItem(null)}
+        url={
+          shareItem
+            ? buildShortUrl(shareItem.short_code, shareItem.short_url)
+            : ""
+        }
+      />
+      <LinkDetailsModal
+        item={detailsItem}
+        onClose={() => setDetailsItem(null)}
+        onUpdated={async () => {
+          await fetchUserHistory();
+          setDetailsItem(null);
+        }}
+      />
     </div>
   );
 }

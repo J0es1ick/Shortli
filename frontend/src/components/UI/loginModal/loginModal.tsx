@@ -1,6 +1,10 @@
-import { useState, useRef, useEffect } from "react";
-import { useUser } from "../../../context/UserContext.tsx";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
+import { useUser } from "../../../context/UserContext";
+import { apiUrl } from "../../../lib/urls";
 import styles from "./loginModal.module.css";
+import { useLocale } from "../../../context/LocaleContext";
 
 interface LoginResponse {
   user_id: number;
@@ -21,76 +25,71 @@ export default function LoginModal({
   onLoginSuccess,
 }: LoginModalProps) {
   const { login } = useUser();
+  const { t, apiError } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  const modalRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        onClose();
-        setError("");
-        setSuccess("");
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    window.setTimeout(() => emailRef.current?.focus(), 80);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, onClose]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const closeModal = () => {
+    setError("");
+    setSuccess("");
+    onClose();
+  };
+
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setLoading(true);
     setError("");
     setSuccess("");
 
     try {
-      const response = await fetch("http://localhost:8088/api/login", {
+      const response = await fetch(apiUrl("/api/login"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
+        body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Login failed");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(apiError(errorData.error, "login.failed"));
       }
 
       const data: LoginResponse = await response.json();
       login(data);
-      setSuccess(`Welcome back, ${data.email}!`);
-
-      setTimeout(() => {
+      setSuccess(t("login.welcome", { email: data.email }));
+      setEmail("");
+      setPassword("");
+      window.setTimeout(() => {
+        onLoginSuccess?.();
         onClose();
         setSuccess("");
-        setEmail("");
-        setPassword("");
-        if (onLoginSuccess) onLoginSuccess();
-        window.location.reload();
-      }, 1000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      }, 650);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : t("login.genericError"),
+      );
     } finally {
       setLoading(false);
     }
@@ -98,67 +97,87 @@ export default function LoginModal({
 
   if (!isOpen) return null;
 
-  return (
-    <>
-      <div className={styles.modal_overlay}>
-        <div ref={modalRef} className={styles.signin_modal}>
-          <div className={styles.modal_header}>
-            <h3 className={styles.modal_title}>Sign in</h3>
-            <button
-              onClick={() => {
-                onClose();
-                setError("");
-                setSuccess("");
-              }}
-              className={styles.close_button}
-            >
-              ×
-            </button>
+  return createPortal(
+    <div
+      className={styles.modal_overlay}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) closeModal();
+      }}
+    >
+      <div
+        className={styles.signin_modal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="signin-title"
+      >
+        <div className={styles.modal_header}>
+          <div>
+            <span>{t("login.access")}</span>
+            <h2 id="signin-title">{t("login.title")}</h2>
           </div>
-          <form onSubmit={handleLogin}>
-            <div className={styles.form_group}>
-              <label className={styles.form_label}>Email</label>
-              <input
-                type="email"
-                className={styles.form_input}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                required
-                disabled={loading}
-              />
-            </div>
-            <div className={styles.form_group}>
-              <label className={styles.form_label}>Password</label>
-              <input
-                type="password"
-                className={styles.form_input}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                disabled={loading}
-              />
-            </div>
-            <button
-              type="submit"
-              className={styles.submit_button}
-              disabled={loading}
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-
-            {error && <div className={styles.error_message}>{error}</div>}
-            {success && <div className={styles.success_message}>{success}</div>}
-
-            <div className={styles.register}>
-              <span>
-                Don't have an account? <a href="/register">Sign up</a>
-              </span>
-            </div>
-          </form>
+          <button
+            onClick={closeModal}
+            className={styles.close_button}
+            aria-label={t("login.close")}
+          >
+            ×
+          </button>
         </div>
+        <form onSubmit={handleLogin}>
+          <label className={styles.form_group}>
+            <span>{t("login.email")}</span>
+            <input
+              ref={emailRef}
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder={t("login.emailPlaceholder")}
+              autoComplete="email"
+              required
+              disabled={loading}
+            />
+          </label>
+          <label className={styles.form_group}>
+            <span>{t("login.password")}</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder={t("login.passwordPlaceholder")}
+              autoComplete="current-password"
+              required
+              disabled={loading}
+            />
+          </label>
+          <button
+            type="submit"
+            className={styles.submit_button}
+            disabled={loading}
+          >
+            <span>{loading ? t("login.signingIn") : t("header.signIn")}</span>
+            <span aria-hidden="true">↗</span>
+          </button>
+
+          {error && (
+            <div className={styles.error_message} role="alert">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className={styles.success_message} role="status">
+              {success}
+            </div>
+          )}
+
+          <p className={styles.register}>
+            {t("login.new")}{" "}
+            <Link to="/register" onClick={closeModal}>
+              {t("login.create")}
+            </Link>
+          </p>
+        </form>
       </div>
-    </>
+    </div>,
+    document.body,
   );
 }

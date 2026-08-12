@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { apiUrl } from "../../lib/urls";
+import Pagination from "../UI/pagination/pagination";
 import URLItem from "./urlItem";
 import styles from "./urlList.module.css";
-import Pagination from "../UI/pagination/pagination";
+import { useLocale } from "../../context/LocaleContext";
+import LinkDetailsModal from "../UI/linkDetailsModal/linkDetailsModal";
 
 export interface URL {
   url_id: number;
@@ -9,10 +12,12 @@ export interface URL {
   short_code: string;
   user_id: number | null;
   click_count: number;
-  created_at: Date;
+  created_at: string;
+  expires_at: string | null;
+  is_active: boolean;
 }
 
-export interface URLResponse {
+interface URLResponse {
   data: URL[];
   meta: {
     total: number;
@@ -23,51 +28,29 @@ export interface URLResponse {
   };
 }
 
-const BASE_URL = "http://localhost:8088";
+const limit = 10;
 
 const getURLs = async (
-  page: number = 1,
-  limit: number = 10,
-  query: string = "",
-): Promise<{ data: URL[]; total: number }> => {
-  try {
-    let url: string;
+  page: number,
+  query: string,
+  errors: { auth: string; admin: string; load: string },
+) => {
+  const endpoint = query.trim()
+    ? `/api/admin/search?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`
+    : `/api/admin/urls?page=${page}&limit=${limit}`;
+  const response = await fetch(apiUrl(endpoint), { credentials: "include" });
 
-    if (query.trim()) {
-      url = `${BASE_URL}/api/admin/search?q=${encodeURIComponent(
-        query,
-      )}&page=${page}&limit=${limit}`;
-    } else {
-      url = `${BASE_URL}/api/admin/urls?page=${page}&limit=${limit}`;
-    }
-
-    const response = await fetch(url, {
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error("Authentication required");
-      }
-      if (response.status === 403) {
-        throw new Error("Admin access required");
-      }
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result: URLResponse = await response.json();
-
-    return {
-      data: result.data,
-      total: result.meta.total,
-    };
-  } catch (err) {
-    console.error("Error fetching URLs:", err);
-    throw err;
+  if (!response.ok) {
+    if (response.status === 401) throw new Error(errors.auth);
+    if (response.status === 403) throw new Error(errors.admin);
+    throw new Error(errors.load);
   }
+
+  return (await response.json()) as URLResponse;
 };
 
 export default function URLList() {
+  const { t, formatNumber } = useLocale();
   const [urls, setURLs] = useState<URL[]>([]);
   const [page, setPage] = useState(1);
   const [totalURLs, setTotalURLs] = useState(0);
@@ -75,85 +58,100 @@ export default function URLList() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const limit: number = 10;
+  const [detailsItem, setDetailsItem] = useState<URL | null>(null);
 
   const fetchURLs = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data, total } = await getURLs(page, limit, searchQuery);
-      setURLs(data);
-      setTotalURLs(total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load URLs");
+      const result = await getURLs(page, searchQuery, {
+        auth: t("admin.authRequired"),
+        admin: t("admin.adminRequired"),
+        load: t("admin.loadError"),
+      });
+      setURLs(result.data);
+      setTotalURLs(result.meta.total);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : t("admin.loadError"),
+      );
     } finally {
       setLoading(false);
     }
-  }, [page, searchQuery]);
+  }, [page, searchQuery, t]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setSearchQuery(searchInput);
       setPage(1);
-    }, 500);
-
-    return () => clearTimeout(timer);
+    }, 350);
+    return () => window.clearTimeout(timer);
   }, [searchInput]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadURLs = async () => {
-      await fetchURLs();
-    };
-
-    if (isMounted) {
-      loadURLs();
-    }
-
-    return () => {
-      isMounted = false;
-    };
+    void fetchURLs();
   }, [fetchURLs]);
 
   useEffect(() => {
-    if (page > 1 && Math.ceil(totalURLs / limit) < page) {
-      setPage(1);
-    }
-  }, [totalURLs, page]);
+    if (page > 1 && Math.ceil(totalURLs / limit) < page) setPage(1);
+  }, [page, totalURLs]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setSearchQuery(searchInput);
     setPage(1);
   };
 
-  const handleClearSearch = () => {
-    setSearchInput("");
-    setSearchQuery("");
-    setPage(1);
+  const handleDelete = async (shortCode: string) => {
+    const response = await fetch(apiUrl(`/api/admin/urls/${shortCode}`), {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      setError(t("admin.deleteError"));
+      return;
+    }
+    await fetchURLs();
   };
 
-  return (
-    <div className={styles.url_list}>
-      <div className={styles.url_list_header}>
-        <h1>URL Management</h1>
+  const totalPages = Math.max(1, Math.ceil(totalURLs / limit));
 
-        <form onSubmit={handleSearchSubmit} className={styles.search_form}>
+  return (
+    <section className={styles.url_list} aria-labelledby="url-index-title">
+      <div className={styles.url_list_header}>
+        <div>
+          <span>{t("admin.label")}</span>
+          <h1 id="url-index-title">{t("admin.title")}</h1>
+          <p>{t("admin.count", { count: formatNumber(totalURLs) })}</p>
+        </div>
+
+        <form
+          onSubmit={handleSearchSubmit}
+          className={styles.search_form}
+          role="search"
+        >
+          <label htmlFor="url-search">{t("admin.search")}</label>
           <div className={styles.search_container}>
             <input
-              type="text"
+              id="url-search"
+              type="search"
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search by URL or short code..."
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder={t("admin.searchPlaceholder")}
               className={styles.search_input}
             />
             {searchInput && (
               <button
                 type="button"
-                onClick={handleClearSearch}
+                onClick={() => {
+                  setSearchInput("");
+                  setSearchQuery("");
+                  setPage(1);
+                }}
                 className={styles.clear_button}
-                title="Clear search"
+                aria-label={t("admin.clearSearch")}
               >
                 ×
               </button>
@@ -162,46 +160,61 @@ export default function URLList() {
         </form>
       </div>
 
-      {error && <div className={styles.error}>{error}</div>}
-
-      <div className={styles.table}>
-        <div className={styles.option_names}>
-          <button>Number</button>
-          <button>Original URL</button>
-          <button>Short Code</button>
-          <button>User ID</button>
-          <button>Click count</button>
-          <button>Created at</button>
-          <button>Link</button>
+      {error && (
+        <div className={styles.error} role="alert">
+          {error}
         </div>
+      )}
 
-        {loading ? (
-          <div className={styles.loading}>Loading URLs...</div>
-        ) : urls.length === 0 ? (
-          <div className={styles.no_results}>
-            {searchQuery
-              ? "No URLs found matching your search."
-              : "No URLs found."}
+      <div className={styles.table_wrap}>
+        <div className={styles.table}>
+          <div className={styles.option_names} aria-hidden="true">
+            <span>{t("admin.number")}</span>
+            <span>{t("admin.original")}</span>
+            <span>{t("admin.code")}</span>
+            <span>{t("admin.user")}</span>
+            <span>{t("admin.clicks")}</span>
+            <span>{t("admin.created")}</span>
+            <span>{t("admin.shortLink")}</span>
+            <span />
           </div>
-        ) : (
-          urls.map((url, index) => (
-            <URLItem
-              key={url.url_id}
-              number={page === 1 ? index + 1 : index + 1 + limit * (page - 1)}
-              url={url}
-            />
-          ))
-        )}
+
+          {loading ? (
+            <div className={styles.loading}>{t("admin.loadingIndex")}</div>
+          ) : urls.length === 0 ? (
+            <div className={styles.no_results}>
+              {searchQuery ? t("admin.noMatch") : t("admin.noLinks")}
+            </div>
+          ) : (
+            urls.map((url, index) => (
+              <URLItem
+                key={url.url_id}
+                number={(page - 1) * limit + index + 1}
+                url={url}
+                onDelete={handleDelete}
+                onManage={() => setDetailsItem(url)}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       {!loading && urls.length > 0 && (
         <Pagination
           page={page}
-          totalPages={Math.ceil(totalURLs / limit)}
+          totalPages={totalPages}
           loading={loading}
           setPage={setPage}
         />
       )}
-    </div>
+      <LinkDetailsModal
+        item={detailsItem}
+        onClose={() => setDetailsItem(null)}
+        onUpdated={async () => {
+          await fetchURLs();
+          setDetailsItem(null);
+        }}
+      />
+    </section>
   );
 }

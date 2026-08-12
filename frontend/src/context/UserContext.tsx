@@ -5,6 +5,7 @@ import React, {
   useEffect,
   type ReactNode,
 } from "react";
+import { apiUrl } from "../lib/urls";
 
 interface User {
   user_id: number;
@@ -17,7 +18,7 @@ interface UserContextType {
   user: User | null;
   isLoading: boolean;
   login: (userData: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   checkAuth: () => void;
 }
 
@@ -35,7 +36,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
 
   const logout = async () => {
     try {
-      await fetch("http://localhost:8088/api/logout", {
+      await fetch(apiUrl("/api/logout"), {
         method: "POST",
         credentials: "include",
       });
@@ -48,7 +49,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
 
   const checkAuth = async () => {
     try {
-      const response = await fetch("http://localhost:8088/api/me", {
+      const response = await fetch(apiUrl("/api/me"), {
         credentials: "include",
       });
 

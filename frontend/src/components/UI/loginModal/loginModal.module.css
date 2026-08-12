@@ -1,170 +1,177 @@
 .modal_overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--scrim);
+  backdrop-filter: blur(12px);
+  animation: overlay-in 180ms ease both;
 }
 
 .signin_modal {
-  background: var(--header-bg);
-  border-radius: 25px;
-  padding: 25px;
-  box-shadow: var(--header-shadow);
-  max-width: 420px;
-  width: 100%;
-  animation: modalAppear 0.2s ease-out;
-}
-
-@keyframes modalAppear {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+  width: min(470px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  padding: 34px;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--shadow-lg);
+  animation: modal-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .modal_header {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  gap: 24px;
+  margin-bottom: 30px;
 }
 
-.modal_title {
-  font-family: "Inter", sans-serif;
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--header-text);
-  text-align: center;
+.modal_header span,
+.form_group > span {
+  color: var(--text-muted);
+  font: 600 9px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.modal_header h2 {
+  margin: 12px 0 0;
+  font-size: clamp(34px, 8vw, 54px);
+  line-height: 0.95;
+  font-weight: 400;
+  letter-spacing: -0.055em;
 }
 
 .close_button {
-  background: none;
-  border: none;
-  font-size: 28px;
-  background-color: var(--button-color);
-  color: var(--button-text);
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--line-soft);
   cursor: pointer;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  transition: all 0.2s;
+  font-size: 24px;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 
 .close_button:hover {
-  background-color: #272727;
-  color: var(--button-color);
+  color: var(--text-inverse);
+  background: var(--text-primary);
+  transform: rotate(4deg);
 }
 
 .form_group {
+  display: block;
   margin-bottom: 18px;
 }
 
-.form_label {
+.form_group > span {
   display: block;
-  font-family: "Inter", sans-serif;
-  font-size: 14px;
-  color: var(--header-text);
-  margin-bottom: 6px;
-  font-weight: 500;
+  margin-bottom: 8px;
 }
 
-.form_input {
+.form_group input {
   width: 100%;
-  padding: 12px 15px;
-  border: 2px solid var(--border-color);
-  border-radius: 16px;
-  background-color: var(--input-bg);
-  color: var(--input-text);
-  font-family: "Inter", sans-serif;
-  font-size: 16px;
-  font-weight: 600;
-  transition: 0.3s;
-  box-sizing: border-box;
+  min-height: 52px;
+  padding: 0 15px;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 0;
+  outline: 0;
+  font-size: 15px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.form_input:focus {
-  outline: none;
-  border-color: var(--button-color);
+.form_group input:focus {
+  border-color: var(--text-primary);
+  box-shadow: 4px 4px 0 var(--line-soft);
+}
+
+.form_group input:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .submit_button {
   width: 100%;
-  font-family: "Inter", sans-serif;
-  font-size: 16px;
-  font-weight: 500;
-  background-color: var(--button-color);
-  color: var(--button-text);
-  padding: 12px;
-  border-radius: 20px;
-  border-style: none;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding: 0 17px;
+  color: var(--text-inverse);
+  background: var(--text-primary);
+  border: 1px solid var(--text-primary);
   cursor: pointer;
-  transition: 0.2s;
-  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: color 160ms ease, background 160ms ease;
 }
 
-.submit_button:hover {
-  transition: 0.2s;
-  border-radius: 10px;
-  background-color: #272727;
-  color: var(--button-color);
-  border-style: none;
+.submit_button:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: transparent;
 }
 
 .submit_button:disabled {
-  background-color: var(--button-disabled);
-  cursor: not-allowed;
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .register {
-  margin-top: 15px;
-  text-align: center;
-}
-
-.register span {
-  font-family: "Inter", sans-serif;
-  font-size: 14px;
-  color: var(--header-text);
+  margin: 24px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .register a {
-  color: var(--button-color);
-  text-decoration: none;
-  font-weight: 500;
-  font-family: "Inter", sans-serif;
-  transition: 0.3s;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-underline-offset: 3px;
 }
 
-.register a:hover {
-  color: var(--button-hover);
-  text-decoration: underline;
+.error_message,
+.success_message {
+  margin-top: 14px;
+  padding: 11px 12px;
+  font: 600 10px/1.4 var(--font-mono);
 }
 
 .error_message {
-  color: #ff4444;
-  font-family: "Inter", sans-serif;
-  font-size: 14px;
-  margin-top: 10px;
-  text-align: center;
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
 }
 
 .success_message {
-  color: #44ff44;
-  font-family: "Inter", sans-serif;
-  font-size: 14px;
-  margin-top: 10px;
-  text-align: center;
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.985);
+  }
+}
+
+@media (max-width: 480px) {
+  .signin_modal {
+    padding: 28px 20px;
+  }
 }

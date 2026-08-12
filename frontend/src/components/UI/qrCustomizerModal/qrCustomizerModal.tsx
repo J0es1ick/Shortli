@@ -1,5 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./qrCustomizerModal.module.css";
+import { useLocale } from "../../../context/LocaleContext";
+import type { TranslationKey } from "../../../i18n/translations";
 
 interface QRCode {
   base64: string;
@@ -13,266 +16,394 @@ interface QRCustomizerModalProps {
   onUpdateQRCode?: (customizedQR: string) => void;
 }
 
+const presets = [
+  { nameKey: "qr.preset.ink", foreground: "#111111", background: "#ffffff" },
+  {
+    nameKey: "qr.preset.reverse",
+    foreground: "#f3f3ee",
+    background: "#111111",
+  },
+  { nameKey: "qr.preset.signal", foreground: "#0c5b46", background: "#e7f4e8" },
+  { nameKey: "qr.preset.cobalt", foreground: "#163c8c", background: "#edf1ff" },
+  { nameKey: "qr.preset.ember", foreground: "#8f2f20", background: "#fff0e8" },
+  { nameKey: "qr.preset.plum", foreground: "#5e255e", background: "#f7eafa" },
+] satisfies Array<{
+  nameKey: TranslationKey;
+  foreground: string;
+  background: string;
+}>;
+
+const loadImage = (source: string, errorMessage: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(errorMessage));
+    image.src = source;
+  });
+
+const hexToRgb = (hex: string) => {
+  const normalized = hex.replace("#", "");
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) return null;
+  return {
+    r: Number.parseInt(normalized.slice(0, 2), 16),
+    g: Number.parseInt(normalized.slice(2, 4), 16),
+    b: Number.parseInt(normalized.slice(4, 6), 16),
+  };
+};
+
 export default function QRCustomizerModal({
   isOpen,
   onClose,
   qrCode,
   onUpdateQRCode,
 }: QRCustomizerModalProps) {
-  const [foregroundColor, setForegroundColor] = useState("#000000");
+  const { t } = useLocale();
+  const [foregroundColor, setForegroundColor] = useState("#111111");
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
   const [logo, setLogo] = useState<string | null>(null);
-  const [customizedQR, setCustomizedQR] = useState<string>("");
+  const [customizedQR, setCustomizedQR] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const uploadId = useId();
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const baseQR = qrCode?.base64;
 
-  // Инициализация при открытии модалки
   useEffect(() => {
-    if (isOpen && qrCode) {
-      setCustomizedQR(qrCode.base64);
-    }
-  }, [isOpen, qrCode]);
+    if (!isOpen) return;
 
-  const handleColorChange = async (
-    colorType: "foreground" | "background",
-    color: string,
-  ) => {
-    if (colorType === "foreground") {
-      setForegroundColor(color);
-    } else {
-      setBackgroundColor(color);
-    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
 
-    await generateCustomQR();
-  };
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setLogo(result);
-        generateCustomQR(result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  useEffect(() => {
+    if (!isOpen || !baseQR) return;
 
-  const handleRemoveLogo = () => {
-    setLogo(null);
-    generateCustomQR();
-  };
+    let cancelled = false;
+    const renderQR = async () => {
+      const foreground = hexToRgb(foregroundColor);
+      const background = hexToRgb(backgroundColor);
+      if (!foreground || !background) return;
 
-  const generateCustomQR = async (customLogo?: string) => {
-    if (!qrCode) return;
+      setLoading(true);
+      setError("");
 
-    setLoading(true);
+      try {
+        const sourceImage = await loadImage(baseQR, t("qr.imageLoadError"));
+        const size = Math.max(sourceImage.naturalWidth, 512);
+        const canvas = previewCanvasRef.current;
+        if (!canvas || cancelled) return;
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) throw new Error(t("qr.previewUnavailable"));
 
-    try {
-      // Здесь будет API запрос для генерации кастомного QR-кода
-      // Пока используем статичную генерацию или имитируем
-      const response = await fetch("http://localhost:8088/api/customize-qr", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          short_code: qrCode.shortCode,
-          foreground_color: foregroundColor,
-          background_color: backgroundColor,
-          logo: customLogo || logo,
-        }),
-      });
+        context.imageSmoothingEnabled = false;
+        context.drawImage(sourceImage, 0, 0, size, size);
+        const imageData = context.getImageData(0, 0, size, size);
 
-      if (response.ok) {
-        const data = await response.json();
-        setCustomizedQR(data.custom_qr_base64);
-        if (onUpdateQRCode) {
-          onUpdateQRCode(data.custom_qr_base64);
+        for (let index = 0; index < imageData.data.length; index += 4) {
+          const average =
+            (imageData.data[index] +
+              imageData.data[index + 1] +
+              imageData.data[index + 2]) /
+            3;
+          const color = average < 145 ? foreground : background;
+          imageData.data[index] = color.r;
+          imageData.data[index + 1] = color.g;
+          imageData.data[index + 2] = color.b;
+          imageData.data[index + 3] = 255;
         }
+        context.putImageData(imageData, 0, 0);
+
+        if (logo) {
+          const logoImage = await loadImage(logo, t("qr.imageLoadError"));
+          const logoBoxSize = Math.round(size * 0.14);
+          const padding = Math.round(size * 0.02);
+          const safeZoneSize = logoBoxSize + padding * 2;
+          const safeZoneX = Math.round((size - safeZoneSize) / 2);
+          const safeZoneY = Math.round((size - safeZoneSize) / 2);
+          const logoScale = Math.min(
+            logoBoxSize / logoImage.naturalWidth,
+            logoBoxSize / logoImage.naturalHeight,
+          );
+          const logoWidth = Math.max(
+            1,
+            Math.round(logoImage.naturalWidth * logoScale),
+          );
+          const logoHeight = Math.max(
+            1,
+            Math.round(logoImage.naturalHeight * logoScale),
+          );
+          const logoX = Math.round((size - logoWidth) / 2);
+          const logoY = Math.round((size - logoHeight) / 2);
+
+          context.fillStyle = backgroundColor;
+          context.fillRect(safeZoneX, safeZoneY, safeZoneSize, safeZoneSize);
+          context.imageSmoothingEnabled = true;
+          context.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
+        }
+
+        const nextQR = canvas.toDataURL("image/png");
+        if (!cancelled) {
+          setCustomizedQR(nextQR);
+          onUpdateQRCode?.(nextQR);
+        }
+      } catch (generationError) {
+        if (!cancelled) {
+          setCustomizedQR(baseQR);
+          setError(
+            generationError instanceof Error
+              ? generationError.message
+              : t("qr.previewError"),
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch (error) {
-      console.error("Error generating custom QR:", error);
-      // В режиме демо показываем сообщение
-      setCustomizedQR(qrCode.base64);
-    } finally {
-      setLoading(false);
+    };
+
+    void renderQR();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    backgroundColor,
+    baseQR,
+    foregroundColor,
+    isOpen,
+    logo,
+    onUpdateQRCode,
+    t,
+  ]);
+
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 2 * 1024 * 1024) {
+      setError(t("qr.fileError"));
+      event.target.value = "";
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onload = () => setLogo(String(reader.result));
+    reader.onerror = () => setError(t("qr.readError"));
+    reader.readAsDataURL(file);
   };
 
   const handleDownload = () => {
-    if (!customizedQR) return;
-
+    if (!customizedQR || !qrCode) return;
     const link = document.createElement("a");
     link.href = customizedQR;
-    link.download = `shortli-qr-${qrCode?.shortCode}.png`;
-    document.body.appendChild(link);
+    link.download = `shortli-${qrCode.shortCode}.png`;
     link.click();
-    document.body.removeChild(link);
+  };
+
+  const handleCopy = async () => {
+    if (!customizedQR) return;
+    try {
+      const blob = await (await fetch(customizedQR)).blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ [blob.type || "image/png"]: blob }),
+      ]);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setError(t("qr.copyUnsupported"));
+    }
   };
 
   if (!isOpen || !qrCode) return null;
 
-  return (
-    <div className={styles.modal_overlay}>
-      <div className={styles.modal}>
+  return createPortal(
+    <div
+      className={styles.modal_overlay}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="qr-modal-title"
+      >
         <div className={styles.modal_header}>
-          <h2>Customize QR Code</h2>
-          <button onClick={onClose} className={styles.close_button}>
+          <div>
+            <span>{t("qr.studio")}</span>
+            <h2 id="qr-modal-title">{t("qr.title")}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className={styles.close_button}
+            aria-label={t("qr.close")}
+          >
             ×
           </button>
         </div>
 
         <div className={styles.modal_content}>
-          <div className={styles.preview_section}>
-            <div className={styles.qr_preview}>
-              {loading ? (
-                <div className={styles.loading}>Generating...</div>
-              ) : (
-                <img src={customizedQR} alt="Custom QR Code" />
-              )}
+          <section
+            className={styles.preview_section}
+            aria-label={t("qr.preview")}
+          >
+            <div className={styles.preview_label}>
+              <span>{t("qr.preview")}</span>
+              <span className={loading ? styles.updating : ""}>
+                {loading ? t("qr.updating") : t("qr.live")}
+              </span>
             </div>
+            <div className={styles.qr_preview}>
+              <canvas
+                ref={previewCanvasRef}
+                role="img"
+                aria-label={t("qr.alt")}
+              />
+            </div>
+            <p>{t("qr.liveNote")}</p>
             <div className={styles.preview_actions}>
               <button
                 onClick={handleDownload}
-                className={styles.download_button}
+                className={styles.primary_button}
               >
-                Download QR Code
+                {t("qr.download")}
               </button>
-              <button
-                onClick={() => navigator.clipboard.writeText(customizedQR)}
-                className={styles.copy_button}
-              >
-                Copy QR Image
+              <button onClick={handleCopy} className={styles.secondary_button}>
+                {copied ? t("common.copied") : t("qr.copyImage")}
               </button>
             </div>
-          </div>
+          </section>
 
-          <div className={styles.customization_section}>
-            <div className={styles.color_picker}>
-              <h3>Colors</h3>
-              <div className={styles.color_group}>
-                <label>Foreground Color</label>
-                <div className={styles.color_input_group}>
-                  <input
-                    type="color"
-                    value={foregroundColor}
-                    onChange={(e) =>
-                      handleColorChange("foreground", e.target.value)
-                    }
-                    className={styles.color_picker_input}
-                  />
-                  <input
-                    type="text"
-                    value={foregroundColor}
-                    onChange={(e) =>
-                      handleColorChange("foreground", e.target.value)
-                    }
-                    className={styles.color_text_input}
-                  />
-                </div>
+          <section className={styles.controls} aria-label={t("qr.controls")}>
+            <div className={styles.control_group}>
+              <div className={styles.control_heading}>
+                <span>01</span>
+                <h3>{t("qr.colorSystem")}</h3>
               </div>
-              <div className={styles.color_group}>
-                <label>Background Color</label>
-                <div className={styles.color_input_group}>
-                  <input
-                    type="color"
-                    value={backgroundColor}
-                    onChange={(e) =>
-                      handleColorChange("background", e.target.value)
-                    }
-                    className={styles.color_picker_input}
-                  />
-                  <input
-                    type="text"
-                    value={backgroundColor}
-                    onChange={(e) =>
-                      handleColorChange("background", e.target.value)
-                    }
-                    className={styles.color_text_input}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.logo_section}>
-              <h3>Logo</h3>
-              {logo ? (
-                <div className={styles.logo_preview_container}>
-                  <div className={styles.logo_preview}>
-                    <img src={logo} alt="Logo" />
+              <div className={styles.color_grid}>
+                <label>
+                  <span>{t("qr.foreground")}</span>
+                  <div className={styles.color_field}>
+                    <input
+                      type="color"
+                      value={foregroundColor}
+                      onInput={(event) =>
+                        setForegroundColor(event.currentTarget.value)
+                      }
+                      onChange={(event) =>
+                        setForegroundColor(event.currentTarget.value)
+                      }
+                      aria-label={t("qr.foregroundAria")}
+                    />
+                    <input
+                      type="text"
+                      value={foregroundColor}
+                      onChange={(event) =>
+                        setForegroundColor(event.target.value)
+                      }
+                      aria-label={t("qr.foregroundHex")}
+                      maxLength={7}
+                    />
                   </div>
+                </label>
+                <label>
+                  <span>{t("qr.background")}</span>
+                  <div className={styles.color_field}>
+                    <input
+                      type="color"
+                      value={backgroundColor}
+                      onInput={(event) =>
+                        setBackgroundColor(event.currentTarget.value)
+                      }
+                      onChange={(event) =>
+                        setBackgroundColor(event.currentTarget.value)
+                      }
+                      aria-label={t("qr.backgroundAria")}
+                    />
+                    <input
+                      type="text"
+                      value={backgroundColor}
+                      onChange={(event) =>
+                        setBackgroundColor(event.target.value)
+                      }
+                      aria-label={t("qr.backgroundHex")}
+                      maxLength={7}
+                    />
+                  </div>
+                </label>
+              </div>
+              <div className={styles.presets}>
+                {presets.map((preset) => (
                   <button
-                    onClick={handleRemoveLogo}
-                    className={styles.remove_logo_button}
-                  >
-                    Remove Logo
-                  </button>
-                </div>
-              ) : (
-                <div className={styles.upload_area}>
-                  <input
-                    type="file"
-                    id="logo-upload"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className={styles.file_input}
-                  />
-                  <label htmlFor="logo-upload" className={styles.upload_label}>
-                    <svg
-                      className={styles.upload_icon}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 5v14m-7-7h14"
-                      />
-                    </svg>
-                    <span>Upload Logo</span>
-                    <span className={styles.upload_hint}>
-                      PNG, JPG up to 2MB
-                    </span>
-                  </label>
-                </div>
-              )}
-            </div>
-
-            <div className={styles.preset_colors}>
-              <h3>Color Presets</h3>
-              <div className={styles.color_presets}>
-                {[
-                  { name: "Classic", fg: "#000000", bg: "#ffffff" },
-                  { name: "Dark", fg: "#ffffff", bg: "#1a1a1a" },
-                  { name: "Ocean", fg: "#0077be", bg: "#e6f7ff" },
-                  { name: "Forest", fg: "#2e7d32", bg: "#f1f8e9" },
-                  { name: "Sunset", fg: "#ff6b35", bg: "#fff3e0" },
-                  { name: "Berry", fg: "#9c27b0", bg: "#f3e5f5" },
-                ].map((preset) => (
-                  <button
-                    key={preset.name}
-                    className={styles.color_preset}
+                    type="button"
+                    key={preset.nameKey}
                     onClick={() => {
-                      setForegroundColor(preset.fg);
-                      setBackgroundColor(preset.bg);
-                      generateCustomQR();
+                      setForegroundColor(preset.foreground);
+                      setBackgroundColor(preset.background);
                     }}
-                    style={{
-                      background: `linear-gradient(135deg, ${preset.bg} 50%, ${preset.fg} 50%)`,
-                    }}
-                    title={`${preset.name}: ${preset.fg} on ${preset.bg}`}
+                    aria-label={t("qr.usePreset", { name: t(preset.nameKey) })}
                   >
-                    <span className={styles.preset_name}>{preset.name}</span>
+                    <i
+                      style={{
+                        background: `linear-gradient(135deg, ${preset.background} 50%, ${preset.foreground} 50%)`,
+                      }}
+                    />
+                    <span>{t(preset.nameKey)}</span>
                   </button>
                 ))}
               </div>
             </div>
-          </div>
+
+            <div className={styles.control_group}>
+              <div className={styles.control_heading}>
+                <span>02</span>
+                <h3>{t("qr.centerMark")}</h3>
+              </div>
+              {logo ? (
+                <div className={styles.logo_selected}>
+                  <img src={logo} alt={t("qr.uploadedAlt")} />
+                  <div>
+                    <strong>{t("qr.logoAdded")}</strong>
+                    <button type="button" onClick={() => setLogo(null)}>
+                      {t("qr.remove")}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label htmlFor={uploadId} className={styles.upload_label}>
+                  <input
+                    id={uploadId}
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={handleLogoUpload}
+                  />
+                  <span aria-hidden="true">＋</span>
+                  <strong>{t("qr.addLogo")}</strong>
+                  <small>{t("qr.fileHint")}</small>
+                </label>
+              )}
+            </div>
+
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
+          </section>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

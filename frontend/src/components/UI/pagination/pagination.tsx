@@ -1,5 +1,6 @@
 import React from "react";
 import styles from "./pagination.module.css";
+import { useLocale } from "../../../context/LocaleContext";
 
 interface IProps {
   page: number;
@@ -14,6 +15,7 @@ export default function Pagination({
   totalPages,
   setPage,
 }: IProps) {
+  const { t } = useLocale();
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setPage(newPage);
@@ -25,27 +27,29 @@ export default function Pagination({
       <button
         disabled={page <= 1 || loading}
         onClick={() => handlePageChange(1)}
+        aria-label={t("pagination.first")}
       >
         {"<<"}
       </button>
       <button
         disabled={page <= 1 || loading}
         onClick={() => handlePageChange(page - 1)}
+        aria-label={t("pagination.previous")}
       >
         {"<"}
       </button>
-      <span>
-        {page} of {totalPages}
-      </span>
+      <span>{t("pagination.pageOf", { page, total: totalPages })}</span>
       <button
         disabled={page >= totalPages || loading}
         onClick={() => handlePageChange(page + 1)}
+        aria-label={t("pagination.next")}
       >
         {">"}
       </button>
       <button
         disabled={page >= totalPages || loading}
         onClick={() => handlePageChange(totalPages)}
+        aria-label={t("pagination.last")}
       >
         {">>"}
       </button>

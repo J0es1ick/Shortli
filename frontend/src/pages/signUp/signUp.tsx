@@ -1,192 +1,156 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import NetworkMesh from "../../components/networkMesh/networkMesh";
+import { Header } from "../../components/UI/header/header";
 import { useUser } from "../../context/UserContext";
+import { apiUrl } from "../../lib/urls";
 import styles from "./signUp.module.css";
+import { useLocale } from "../../context/LocaleContext";
 
 export default function SignUpPage() {
   const navigate = useNavigate();
   const { login } = useUser();
+  const { t, apiError } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleRegister = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
+      setError(t("signup.passwordMismatch"));
+      return;
+    }
+    if (
+      password.length < 10 ||
+      !/[A-Za-zА-Яа-яЁё]/.test(password) ||
+      !/[0-9]/.test(password)
+    ) {
+      setError(t("signup.passwordLength"));
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
-      setLoading(false);
-      return;
-    }
-
+    setLoading(true);
     try {
-      const registerResponse = await fetch(
-        "http://localhost:8088/api/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            email: email,
-            password: password,
-          }),
-        }
-      );
-
-      if (!registerResponse.ok) {
-        const errorData = await registerResponse.json();
-        throw new Error(errorData.error || "Registration failed");
-      }
-
-      await registerResponse.json();
-
-      const loginResponse = await fetch("http://localhost:8088/api/login", {
+      const registerResponse = await fetch(apiUrl("/api/register"), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
+        body: JSON.stringify({ email, password }),
       });
 
-      if (!loginResponse.ok) {
-        throw new Error("Auto-login after registration failed");
+      if (!registerResponse.ok) {
+        const errorData = await registerResponse.json().catch(() => ({}));
+        throw new Error(apiError(errorData.error, "signup.failed"));
       }
 
-      const loginData = await loginResponse.json();
-      login(loginData);
+      const loginResponse = await fetch(apiUrl("/api/login"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+      if (!loginResponse.ok) throw new Error(t("signup.loginFailed"));
 
+      login(await loginResponse.json());
       navigate("/");
-    } catch (err) {
+    } catch (requestError) {
       setError(
-        err instanceof Error
-          ? err.message
-          : "An error occurred during registration"
+        requestError instanceof Error
+          ? requestError.message
+          : t("signup.genericError"),
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleBackClick = () => {
-    navigate("/");
-  };
-
-  const handleSignInClick = () => {
-    navigate("/", { state: { openLoginModal: true } });
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleRegister(e);
-    }
-  };
-
   return (
-    <div className={styles.signup_page}>
-      <button className={styles.back_button} onClick={handleBackClick}>
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+    <div className={styles.page}>
+      <Header />
+      <main className={styles.main}>
+        <section className={styles.intro} aria-labelledby="signup-title">
+          <div>
+            <span>{t("signup.members")}</span>
+            <h1 id="signup-title">{t("signup.hero")}</h1>
+            <p>{t("signup.intro")}</p>
+          </div>
+          <NetworkMesh />
+        </section>
+
+        <section
+          className={styles.form_panel}
+          aria-label={t("signup.createButton")}
         >
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        Back
-      </button>
-
-      <div className={styles.form_container}>
-        <div className={styles.form_wrapper}>
-          <h1 className={styles.page_title}>Create your account</h1>
-
-          <form className={styles.form} onSubmit={handleRegister}>
-            <div className={styles.form_group}>
-              <label className={styles.form_label}>Email</label>
+          <div className={styles.form_heading}>
+            <span>{t("signup.create")}</span>
+            <p>{t("signup.simple")}</p>
+          </div>
+          <form onSubmit={handleRegister}>
+            <label>
+              <span>{t("signup.email")}</span>
               <input
                 type="email"
-                className={styles.form_input}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Enter your email"
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder={t("login.emailPlaceholder")}
+                autoComplete="email"
                 required
                 disabled={loading}
               />
-            </div>
-
-            <div className={styles.form_group}>
-              <label className={styles.form_label}>Password</label>
+            </label>
+            <label>
+              <span>{t("signup.password")}</span>
               <input
                 type="password"
-                className={styles.form_input}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Create a password"
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder={t("signup.passwordPlaceholder")}
+                autoComplete="new-password"
+                minLength={10}
+                maxLength={72}
                 required
                 disabled={loading}
-                minLength={6}
               />
-              <div className={styles.password_hint}>
-                Password must be at least 6 characters long
-              </div>
-            </div>
-
-            <div className={styles.form_group}>
-              <label className={styles.form_label}>Confirm Password</label>
+            </label>
+            <label>
+              <span>{t("signup.confirmPassword")}</span>
               <input
                 type="password"
-                className={styles.form_input}
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Confirm your password"
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder={t("signup.confirmPlaceholder")}
+                autoComplete="new-password"
                 required
                 disabled={loading}
               />
-            </div>
+            </label>
 
-            <button
-              type="submit"
-              className={styles.submit_button}
-              disabled={loading}
-            >
-              {loading ? "Creating account..." : "Sign up"}
+            <button type="submit" disabled={loading}>
+              <span>
+                {loading ? t("signup.creating") : t("signup.createButton")}
+              </span>
+              <span aria-hidden="true">↗</span>
             </button>
 
-            {error && <div className={styles.error_message}>{error}</div>}
-
-            <div className={styles.login_link}>
-              <span>Already have an account? </span>
-              <a
-                type="button"
-                onClick={handleSignInClick}
-                className={styles.link}
-              >
-                Sign in
-              </a>
-            </div>
+            {error && (
+              <p className={styles.error} role="alert">
+                {error}
+              </p>
+            )}
           </form>
-        </div>
-      </div>
+          <p className={styles.signin_note}>
+            {t("signup.member")}{" "}
+            <Link to="/" state={{ openLoginModal: true }}>
+              {t("signup.signIn")}
+            </Link>
+          </p>
+        </section>
+      </main>
     </div>
   );
 }

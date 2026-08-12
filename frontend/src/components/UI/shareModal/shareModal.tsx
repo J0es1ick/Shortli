@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import styles from "./shareModal.module.css";
+import { useLocale } from "../../../context/LocaleContext";
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -9,214 +11,240 @@ interface ShareModalProps {
   description?: string;
 }
 
+interface SharePlatform {
+  name: string;
+  mark: string;
+  color: string;
+  url: string;
+}
+
 export default function ShareModal({
   isOpen,
   onClose,
   url,
-  title = "Check out this short link!",
-  description = "Shortened URL created with Shortli",
+  title,
+  description,
 }: ShareModalProps) {
-  const [copied, setCopied] = useState(false);
+  const { t } = useLocale();
+  const [copied, setCopied] = useState("");
+  const nativeShare = (
+    navigator as unknown as {
+      share?: (data: ShareData) => Promise<void>;
+    }
+  ).share;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
+  const resolvedTitle = title || t("shortener.shareTitle");
+  const resolvedDescription =
+    description || t("shortener.shareDescription", { url });
   const encodedUrl = encodeURIComponent(url);
-  const encodedTitle = encodeURIComponent(title);
-  const encodedDescription = encodeURIComponent(description);
+  const encodedTitle = encodeURIComponent(resolvedTitle);
+  const encodedDescription = encodeURIComponent(resolvedDescription);
+  const htmlCode = `<a href="${url}" target="_blank" rel="noopener noreferrer">${resolvedTitle}</a>`;
+  const markdownCode = `[${resolvedTitle}](${url})`;
 
-  const sharePlatforms = [
+  const sharePlatforms: SharePlatform[] = [
     {
-      name: "Twitter",
-      icon: "🐦",
-      color: "#1DA1F2",
+      name: "X / Twitter",
+      mark: "X",
+      color: "#151515",
       url: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
     },
     {
-      name: "Facebook",
-      icon: "📘",
-      color: "#1877F2",
-      url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-    },
-    {
       name: "LinkedIn",
-      icon: "💼",
-      color: "#0077B5",
+      mark: "in",
+      color: "#0a66c2",
       url: `https://www.linkedin.com/shareArticle?mini=true&url=${encodedUrl}&title=${encodedTitle}&summary=${encodedDescription}`,
     },
     {
       name: "Telegram",
-      icon: "📲",
-      color: "#0088CC",
+      mark: "TG",
+      color: "#168acd",
       url: `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`,
     },
     {
       name: "WhatsApp",
-      icon: "💚",
-      color: "#25D366",
+      mark: "WA",
+      color: "#1f9e59",
       url: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,
     },
     {
-      name: "Reddit",
-      icon: "👽",
-      color: "#FF5700",
-      url: `https://reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`,
+      name: "Facebook",
+      mark: "f",
+      color: "#1877f2",
+      url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
     },
     {
-      name: "Copy Link",
-      icon: "🔗",
-      color: "#6B7280",
-      action: "copy",
+      name: "Reddit",
+      mark: "r/",
+      color: "#e84b18",
+      url: `https://reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`,
     },
   ];
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleShare = async (platform: (typeof sharePlatforms)[0]) => {
-    if (platform.action === "copy") {
-      handleCopy();
-      return;
+  const copyText = async (value: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(key);
+      window.setTimeout(() => setCopied(""), 1600);
+    } catch {
+      setCopied("error");
     }
-
-    const width = 600;
-    const height = 400;
-    const left = (window.innerWidth - width) / 2;
-    const top = (window.innerHeight - height) / 2;
-
-    window.open(
-      platform.url,
-      "share",
-      `width=${width},height=${height},left=${left},top=${top}`,
-    );
   };
 
   const handleNativeShare = async () => {
-    // Используем более безопасную проверку
-    if (navigator.share && typeof navigator.share === "function") {
-      try {
-        await navigator.share({
-          title,
-          text: description,
-          url,
-        });
-      } catch (error) {
-        // Пользователь отменил шаринг или произошла ошибка
-        if ((error as Error).name !== "AbortError") {
-          console.error("Error sharing:", error);
-        }
-      }
+    if (!nativeShare) return;
+    try {
+      await nativeShare.call(navigator, {
+        title: resolvedTitle,
+        text: resolvedDescription,
+        url,
+      });
+    } catch (shareError) {
+      if ((shareError as Error).name !== "AbortError") setCopied("error");
     }
   };
 
-  // Проверяем, поддерживает ли браузер Web Share API
-  const supportsNativeShare =
-    navigator.share && typeof navigator.share === "function";
+  const openShareWindow = (platform: SharePlatform) => {
+    const width = 640;
+    const height = 520;
+    window.open(
+      platform.url,
+      "shortli-share",
+      `noopener,noreferrer,width=${width},height=${height},left=${Math.max(
+        0,
+        (window.innerWidth - width) / 2,
+      )},top=${Math.max(0, (window.innerHeight - height) / 2)}`,
+    );
+  };
 
-  return (
-    <div className={styles.modal_overlay}>
-      <div className={styles.modal}>
-        <div className={styles.modal_header}>
-          <h2>Share This Link</h2>
-          <button onClick={onClose} className={styles.close_button}>
+  return createPortal(
+    <div
+      className={styles.modal_overlay}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-modal-title"
+      >
+        <header className={styles.modal_header}>
+          <div>
+            <span>{t("share.distribute")}</span>
+            <h2 id="share-modal-title">{t("share.title")}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className={styles.close_button}
+            aria-label={t("share.close")}
+          >
             ×
           </button>
-        </div>
+        </header>
 
         <div className={styles.url_preview}>
-          <div className={styles.url_text}>{url}</div>
-          <button
-            onClick={handleCopy}
-            className={`${styles.copy_button} ${copied ? styles.copied : ""}`}
-          >
-            {copied ? "✓ Copied" : "Copy"}
+          <div>
+            <span>{t("share.shortUrl")}</span>
+            <strong>{url.replace(/^https?:\/\//, "")}</strong>
+          </div>
+          <button type="button" onClick={() => copyText(url, "url")}>
+            {copied === "url" ? t("common.copied") : t("share.copyLink")}
           </button>
         </div>
 
-        {supportsNativeShare && (
-          <div className={styles.native_share}>
-            <button
-              onClick={handleNativeShare}
-              className={styles.native_share_button}
-            >
-              <svg
-                className={styles.share_icon}
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                />
-              </svg>
-              Share via Device
-            </button>
-          </div>
+        {nativeShare && (
+          <button
+            type="button"
+            onClick={handleNativeShare}
+            className={styles.native_share_button}
+          >
+            <span>{t("share.device")}</span>
+            <span aria-hidden="true">↗</span>
+          </button>
         )}
 
-        <div className={styles.platforms}>
-          <h3>Share on Social Media</h3>
+        <section
+          className={styles.platforms}
+          aria-labelledby="share-platforms-heading"
+        >
+          <div className={styles.section_heading}>
+            <span>01</span>
+            <h3 id="share-platforms-heading">{t("share.channel")}</h3>
+          </div>
           <div className={styles.platforms_grid}>
             {sharePlatforms.map((platform) => (
               <button
+                type="button"
                 key={platform.name}
+                onClick={() => openShareWindow(platform)}
                 className={styles.platform_button}
-                onClick={() => handleShare(platform)}
-                style={
-                  { "--platform-color": platform.color } as React.CSSProperties
-                }
+                style={{ "--platform-color": platform.color } as CSSProperties}
               >
-                <div
-                  className={styles.platform_icon}
-                  style={{ backgroundColor: platform.color }}
-                >
-                  {platform.icon}
-                </div>
-                <span className={styles.platform_name}>{platform.name}</span>
+                <span className={styles.platform_mark}>{platform.mark}</span>
+                <span>{platform.name}</span>
+                <span aria-hidden="true">↗</span>
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
-        <div className={styles.embed_section}>
-          <h3>Embed Options</h3>
+        <section
+          className={styles.embed_section}
+          aria-labelledby="embed-heading"
+        >
+          <div className={styles.section_heading}>
+            <span>02</span>
+            <h3 id="embed-heading">{t("share.code")}</h3>
+          </div>
           <div className={styles.embed_options}>
             <div className={styles.embed_option}>
-              <h4>HTML Link</h4>
-              <code className={styles.embed_code}>
-                {`<a href="${url}" target="_blank">${title}</a>`}
-              </code>
-              <button
-                onClick={() =>
-                  navigator.clipboard.writeText(
-                    `<a href="${url}" target="_blank">${title}</a>`,
-                  )
-                }
-                className={styles.copy_code_button}
-              >
-                Copy HTML
+              <span>HTML</span>
+              <code>{htmlCode}</code>
+              <button type="button" onClick={() => copyText(htmlCode, "html")}>
+                {copied === "html" ? t("common.copied") : t("share.copyHtml")}
               </button>
             </div>
             <div className={styles.embed_option}>
-              <h4>Markdown</h4>
-              <code className={styles.embed_code}>{`[${title}](${url})`}</code>
+              <span>MARKDOWN</span>
+              <code>{markdownCode}</code>
               <button
-                onClick={() =>
-                  navigator.clipboard.writeText(`[${title}](${url})`)
-                }
-                className={styles.copy_code_button}
+                type="button"
+                onClick={() => copyText(markdownCode, "markdown")}
               >
-                Copy Markdown
+                {copied === "markdown"
+                  ? t("common.copied")
+                  : t("share.copyMarkdown")}
               </button>
             </div>
           </div>
-        </div>
+        </section>
+
+        {copied === "error" && (
+          <p className={styles.error} role="alert">
+            {t("share.clipboardUnavailable")}
+          </p>
+        )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
