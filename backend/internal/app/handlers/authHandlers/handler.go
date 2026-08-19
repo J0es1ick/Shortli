@@ -78,7 +78,7 @@ func (h *AuthHandler) Bootstrap(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusInternalServerError, "Failed to hash password")
 		return
 	}
-	user := &models.User{Email: email, PasswordHash: string(passwordHash), IsAdmin: true}
+	user := &models.User{Email: email, PasswordHash: string(passwordHash), Role: models.RoleOwner}
 	if err := h.userRepo.BootstrapAdmin(r.Context(), user); err != nil {
 		if errors.Is(err, repository.ErrAdminAlreadyExists) {
 			response.Error(w, http.StatusConflict, "An administrator already exists")
@@ -87,9 +87,7 @@ func (h *AuthHandler) Bootstrap(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusInternalServerError, "Failed to create administrator")
 		return
 	}
-	response.JSON(w, http.StatusCreated, userHandlers.UserResponse{
-		ID: user.ID, Email: user.Email, IsAdmin: true, CreatedAt: user.CreatedAt,
-	})
+	response.JSON(w, http.StatusCreated, userHandlers.NewUserResponse(user))
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +129,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	user := &models.User{
 		Email:        req.Email,
 		PasswordHash: string(hashedPassword),
-		IsAdmin:      false,
+		Role:         models.RoleUser,
 	}
 
 	if err := h.userRepo.SaveUser(r.Context(), user); err != nil {
@@ -139,12 +137,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.JSON(w, http.StatusCreated, userHandlers.UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		IsAdmin:   user.IsAdmin,
-		CreatedAt: user.CreatedAt,
-	})
+	response.JSON(w, http.StatusCreated, userHandlers.NewUserResponse(user))
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -205,12 +198,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	response.JSON(w, http.StatusOK, userHandlers.UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		IsAdmin:   user.IsAdmin,
-		CreatedAt: user.CreatedAt,
-	})
+	response.JSON(w, http.StatusOK, userHandlers.NewUserResponse(user))
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
@@ -255,10 +243,5 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.JSON(w, http.StatusOK, userHandlers.UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		IsAdmin:   user.IsAdmin,
-		CreatedAt: user.CreatedAt,
-	})
+	response.JSON(w, http.StatusOK, userHandlers.NewUserResponse(user))
 }

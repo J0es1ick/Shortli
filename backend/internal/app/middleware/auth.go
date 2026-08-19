@@ -80,17 +80,28 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		user := GetUserFromContext(r)
-		if user == nil {
-			response.Error(w, http.StatusUnauthorized, "Authentication required")
-			return
+	return RequireRoles(models.RoleOwner, models.RoleAdmin, models.RoleSupport)(next)
+}
+
+func RequireRoles(roles ...models.UserRole) func(http.HandlerFunc) http.HandlerFunc {
+	allowed := make(map[models.UserRole]struct{}, len(roles))
+	for _, role := range roles {
+		allowed[role] = struct{}{}
+	}
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			user := GetUserFromContext(r)
+			if user == nil {
+				response.Error(w, http.StatusUnauthorized, "Authentication required")
+				return
+			}
+			user.NormalizeAccess()
+			if _, ok := allowed[user.Role]; !ok {
+				response.Error(w, http.StatusForbidden, "Insufficient access rights")
+				return
+			}
+			next(w, r)
 		}
-		if !user.IsAdmin {
-			response.Error(w, http.StatusForbidden, "Admin access required")
-			return
-		}
-		next(w, r)
 	}
 }
 

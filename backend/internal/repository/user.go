@@ -11,7 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var ErrLastAdmin = errors.New("last administrator cannot be removed")
+var ErrLastOwner = errors.New("last owner cannot be removed")
 var ErrAdminAlreadyExists = errors.New("an administrator already exists")
 
 type UserRepository struct {
@@ -23,9 +23,10 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 }
 
 func (r *UserRepository) SaveUser(ctx context.Context, user *models.User) error {
+	user.NormalizeAccess()
 	query := `
-		INSERT INTO user_info (email, password_hash, is_admin, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO user_info (email, password_hash, is_admin, role, created_at)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING user_id, created_at
 	`
 	err := r.db.QueryRowContext(ctx,
@@ -33,6 +34,7 @@ func (r *UserRepository) SaveUser(ctx context.Context, user *models.User) error 
 		user.Email,
 		user.PasswordHash,
 		user.IsAdmin,
+		user.Role,
 		time.Now(),
 	).Scan(&user.ID, &user.CreatedAt)
 
@@ -53,21 +55,23 @@ func (r *UserRepository) BootstrapAdmin(ctx context.Context, user *models.User) 
 		return fmt.Errorf("lock admin bootstrap: %w", err)
 	}
 	var exists bool
-	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS(SELECT 1 FROM user_info WHERE is_admin)`); err != nil {
+	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS(SELECT 1 FROM user_info WHERE role = 'owner')`); err != nil {
 		return fmt.Errorf("check administrator: %w", err)
 	}
 	if exists {
 		return ErrAdminAlreadyExists
 	}
 	if err := tx.QueryRowxContext(ctx, `
-		INSERT INTO user_info (email, password_hash, is_admin, created_at)
-		VALUES ($1, $2, TRUE, NOW())
+		INSERT INTO user_info (email, password_hash, is_admin, role, created_at)
+		VALUES ($1, $2, TRUE, 'owner', NOW())
 		ON CONFLICT (email) DO UPDATE
-		SET password_hash = EXCLUDED.password_hash, is_admin = TRUE
+		SET password_hash = EXCLUDED.password_hash, is_admin = TRUE, role = 'owner'
 		RETURNING user_id, created_at
 	`, user.Email, user.PasswordHash).Scan(&user.ID, &user.CreatedAt); err != nil {
 		return fmt.Errorf("create bootstrap administrator: %w", err)
 	}
+	user.Role = models.RoleOwner
+	user.IsAdmin = true
 	if _, err := tx.ExecContext(ctx, `DELETE FROM session_info WHERE user_id = $1`, user.ID); err != nil {
 		return fmt.Errorf("revoke bootstrap account sessions: %w", err)
 	}
@@ -79,7 +83,7 @@ func (r *UserRepository) BootstrapAdmin(ctx context.Context, user *models.User) 
 
 func (r *UserRepository) FindUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `
-		SELECT user_id, email, password_hash, is_admin, created_at
+		SELECT user_id, email, password_hash, is_admin, role, created_at
 		FROM user_info
 		WHERE email = $1
 	`
@@ -89,6 +93,7 @@ func (r *UserRepository) FindUserByEmail(ctx context.Context, email string) (*mo
 		&user.Email,
 		&user.PasswordHash,
 		&user.IsAdmin,
+		&user.Role,
 		&user.CreatedAt,
 	)
 
@@ -99,12 +104,13 @@ func (r *UserRepository) FindUserByEmail(ctx context.Context, email string) (*mo
 		return nil, fmt.Errorf("find user by email error: %v", err)
 	}
 
+	user.NormalizeAccess()
 	return user, nil
 }
 
 func (r *UserRepository) FindUserByID(ctx context.Context, id int) (*models.User, error) {
 	query := `
-		SELECT user_id, email, password_hash, is_admin, created_at
+		SELECT user_id, email, password_hash, is_admin, role, created_at
 		FROM user_info
 		WHERE user_id = $1
 	`
@@ -114,6 +120,7 @@ func (r *UserRepository) FindUserByID(ctx context.Context, id int) (*models.User
 		&user.Email,
 		&user.PasswordHash,
 		&user.IsAdmin,
+		&user.Role,
 		&user.CreatedAt,
 	)
 
@@ -124,6 +131,7 @@ func (r *UserRepository) FindUserByID(ctx context.Context, id int) (*models.User
 		return nil, fmt.Errorf("find user by id error: %v", err)
 	}
 
+	user.NormalizeAccess()
 	return user, nil
 }
 
@@ -136,7 +144,32 @@ func (r *UserRepository) FindTotalUsers(ctx context.Context) (int, error) {
 	return count, nil
 }
 
+func (r *UserRepository) FindRoleCounts(ctx context.Context) (map[models.UserRole]int, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT role, COUNT(*) FROM user_info GROUP BY role`)
+	if err != nil {
+		return nil, fmt.Errorf("count user roles: %v", err)
+	}
+	defer rows.Close()
+	counts := map[models.UserRole]int{
+		models.RoleOwner: 0, models.RoleAdmin: 0,
+		models.RoleSupport: 0, models.RoleUser: 0,
+	}
+	for rows.Next() {
+		var role models.UserRole
+		var count int
+		if err := rows.Scan(&role, &count); err != nil {
+			return nil, fmt.Errorf("scan user role count: %v", err)
+		}
+		counts[role] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate user role counts: %v", err)
+	}
+	return counts, nil
+}
+
 func (r *UserRepository) UpdateUser(ctx context.Context, user *models.User) error {
+	user.NormalizeAccess()
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin user update: %v", err)
@@ -145,28 +178,28 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *models.User) erro
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock($1)`, int64(739104226)); err != nil {
 		return fmt.Errorf("lock user update: %v", err)
 	}
-	var wasAdmin bool
-	if err := tx.GetContext(ctx, &wasAdmin, `SELECT is_admin FROM user_info WHERE user_id = $1 FOR UPDATE`, user.ID); err != nil {
+	var previousRole models.UserRole
+	if err := tx.GetContext(ctx, &previousRole, `SELECT role FROM user_info WHERE user_id = $1 FOR UPDATE`, user.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("user not found")
 		}
 		return fmt.Errorf("load user for update: %v", err)
 	}
-	if wasAdmin && !user.IsAdmin {
-		var adminCount int
-		if err := tx.GetContext(ctx, &adminCount, `SELECT COUNT(*) FROM user_info WHERE is_admin`); err != nil {
-			return fmt.Errorf("count administrators: %v", err)
+	if previousRole == models.RoleOwner && user.Role != models.RoleOwner {
+		var ownerCount int
+		if err := tx.GetContext(ctx, &ownerCount, `SELECT COUNT(*) FROM user_info WHERE role = 'owner'`); err != nil {
+			return fmt.Errorf("count owners: %v", err)
 		}
-		if adminCount <= 1 {
-			return ErrLastAdmin
+		if ownerCount <= 1 {
+			return ErrLastOwner
 		}
 	}
 	query := `
         UPDATE user_info 
-        SET email = $1, is_admin = $2
-        WHERE user_id = $3
+		SET email = $1, role = $2, is_admin = $3
+		WHERE user_id = $4
     `
-	result, err := tx.ExecContext(ctx, query, user.Email, user.IsAdmin, user.ID)
+	result, err := tx.ExecContext(ctx, query, user.Email, user.Role, user.IsAdmin, user.ID)
 	if err != nil {
 		return fmt.Errorf("update user error: %v", err)
 	}
@@ -222,20 +255,20 @@ func (r *UserRepository) DeleteUser(ctx context.Context, userID int) ([]string, 
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock($1)`, int64(739104226)); err != nil {
 		return nil, fmt.Errorf("lock user deletion: %v", err)
 	}
-	var isAdmin bool
-	if err := tx.GetContext(ctx, &isAdmin, `SELECT is_admin FROM user_info WHERE user_id = $1 FOR UPDATE`, userID); err != nil {
+	var role models.UserRole
+	if err := tx.GetContext(ctx, &role, `SELECT role FROM user_info WHERE user_id = $1 FOR UPDATE`, userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, fmt.Errorf("load user for deletion: %v", err)
 	}
-	if isAdmin {
-		var adminCount int
-		if err := tx.GetContext(ctx, &adminCount, `SELECT COUNT(*) FROM user_info WHERE is_admin`); err != nil {
-			return nil, fmt.Errorf("count administrators: %v", err)
+	if role == models.RoleOwner {
+		var ownerCount int
+		if err := tx.GetContext(ctx, &ownerCount, `SELECT COUNT(*) FROM user_info WHERE role = 'owner'`); err != nil {
+			return nil, fmt.Errorf("count owners: %v", err)
 		}
-		if adminCount <= 1 {
-			return nil, ErrLastAdmin
+		if ownerCount <= 1 {
+			return nil, ErrLastOwner
 		}
 	}
 	shortCodes := []string{}
@@ -264,7 +297,7 @@ func (r *UserRepository) DeleteUser(ctx context.Context, userID int) ([]string, 
 
 func (r *UserRepository) GetAllUsers(ctx context.Context, limit, offset int) ([]models.User, error) {
 	query := `
-        SELECT user_id, email, is_admin, created_at
+		SELECT user_id, email, is_admin, role, created_at
         FROM user_info
         ORDER BY created_at DESC
         LIMIT $1 OFFSET $2

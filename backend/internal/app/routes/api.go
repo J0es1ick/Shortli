@@ -12,6 +12,7 @@ import (
 	"github.com/J0es1ick/shortli/internal/app/middleware"
 	"github.com/J0es1ick/shortli/internal/app/tasks"
 	"github.com/J0es1ick/shortli/internal/config"
+	"github.com/J0es1ick/shortli/internal/models"
 	"github.com/J0es1ick/shortli/internal/repository"
 )
 
@@ -40,6 +41,8 @@ func SetupRoutes(
 	shortenLimiter := middleware.NewRateLimiter(60, time.Hour, clientIP)
 	reportLimiter := middleware.NewRateLimiter(5, time.Hour, clientIP)
 	authLimiter := middleware.NewRateLimiter(20, 15*time.Minute, clientIP)
+	staffOnly := middleware.RequireRoles(models.RoleOwner, models.RoleAdmin, models.RoleSupport)
+	managementOnly := middleware.RequireRoles(models.RoleOwner, models.RoleAdmin)
 
 	mux.HandleFunc("GET /", urlHandler.Home)
 	mux.HandleFunc("GET /api/health", urlHandler.Health)
@@ -83,18 +86,18 @@ func SetupRoutes(
 	mux.HandleFunc("POST /api/user/change-password", middleware.RequireAuth(userHandler.ChangePassword))
 	mux.HandleFunc("DELETE /api/user/account", middleware.RequireAuth(userHandler.DeleteAccount))
 
-	mux.HandleFunc("GET /api/admin/stats", middleware.RequireAdmin(urlHandler.AdminStats))
-	mux.HandleFunc("GET /api/admin/urls", middleware.RequireAdmin(urlHandler.Stats))
-	mux.HandleFunc("GET /api/admin/search", middleware.RequireAdmin(urlHandler.SearchUrls))
-	mux.HandleFunc("DELETE /api/admin/urls/{shortCode}", middleware.RequireAdmin(urlHandler.Delete))
-	mux.HandleFunc("GET /api/admin/abuse-reports", middleware.RequireAdmin(abuseHandler.List))
-	mux.HandleFunc("PATCH /api/admin/abuse-reports/{id}", middleware.RequireAdmin(abuseHandler.Resolve))
-	mux.HandleFunc("GET /api/admin/blocked-domains", middleware.RequireAdmin(abuseHandler.BlockedDomains))
-	mux.HandleFunc("DELETE /api/admin/blocked-domains/{id}", middleware.RequireAdmin(abuseHandler.UnblockDomain))
+	mux.HandleFunc("GET /api/admin/stats", staffOnly(urlHandler.AdminStats))
+	mux.HandleFunc("GET /api/admin/urls", staffOnly(urlHandler.Stats))
+	mux.HandleFunc("GET /api/admin/search", staffOnly(urlHandler.SearchUrls))
+	mux.HandleFunc("DELETE /api/admin/urls/{shortCode}", staffOnly(urlHandler.Delete))
+	mux.HandleFunc("GET /api/admin/abuse-reports", staffOnly(abuseHandler.List))
+	mux.HandleFunc("PATCH /api/admin/abuse-reports/{id}", staffOnly(abuseHandler.Resolve))
+	mux.HandleFunc("GET /api/admin/blocked-domains", staffOnly(abuseHandler.BlockedDomains))
+	mux.HandleFunc("DELETE /api/admin/blocked-domains/{id}", managementOnly(abuseHandler.UnblockDomain))
 
-	mux.HandleFunc("GET /api/admin/users", middleware.RequireAdmin(userHandler.GetAllUsers))
-	mux.HandleFunc("PUT /api/admin/users/{id}", middleware.RequireAdmin(userHandler.UpdateUser))
-	mux.HandleFunc("DELETE /api/admin/users/{id}", middleware.RequireAdmin(userHandler.DeleteUser))
+	mux.HandleFunc("GET /api/admin/users", managementOnly(userHandler.GetAllUsers))
+	mux.HandleFunc("PUT /api/admin/users/{id}", managementOnly(userHandler.UpdateUser))
+	mux.HandleFunc("DELETE /api/admin/users/{id}", managementOnly(userHandler.DeleteUser))
 
 	handler := middleware.SecurityHeaders(
 		middleware.CORSMiddleware(

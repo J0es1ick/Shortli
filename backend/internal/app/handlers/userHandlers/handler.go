@@ -9,6 +9,7 @@ import (
 
 	response "github.com/J0es1ick/shortli/internal/app/httputils"
 	"github.com/J0es1ick/shortli/internal/app/middleware"
+	"github.com/J0es1ick/shortli/internal/models"
 	"github.com/J0es1ick/shortli/internal/repository"
 	"github.com/J0es1ick/shortli/pkg/validator"
 	"golang.org/x/crypto/bcrypt"
@@ -36,8 +37,7 @@ type ChangePasswordRequest struct {
 }
 
 type UpdateUserRequest struct {
-	Email   string `json:"email"`
-	IsAdmin bool   `json:"is_admin"`
+	Role models.UserRole `json:"role"`
 }
 
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
@@ -52,12 +52,7 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.JSON(w, http.StatusOK, UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		IsAdmin:   user.IsAdmin,
-		CreatedAt: user.CreatedAt,
-	})
+	response.JSON(w, http.StatusOK, NewUserResponse(user))
 }
 
 func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
@@ -97,12 +92,7 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.JSON(w, http.StatusOK, UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		IsAdmin:   user.IsAdmin,
-		CreatedAt: user.CreatedAt,
-	})
+	response.JSON(w, http.StatusOK, NewUserResponse(user))
 }
 
 func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
@@ -165,8 +155,8 @@ func (h *UserHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 
 	shortCodes, err := h.userRepo.DeleteUser(r.Context(), user.ID)
 	if err != nil {
-		if errors.Is(err, repository.ErrLastAdmin) {
-			response.Error(w, http.StatusConflict, "The last administrator cannot be deleted")
+		if errors.Is(err, repository.ErrLastOwner) {
+			response.Error(w, http.StatusConflict, "The last owner cannot be deleted")
 			return
 		}
 		response.Error(w, http.StatusInternalServerError, "Failed to delete account")
@@ -220,15 +210,15 @@ func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusInternalServerError, "Failed to get total count")
 		return
 	}
+	roleCounts, err := h.userRepo.FindRoleCounts(r.Context())
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "Failed to get role counts")
+		return
+	}
 
 	userResponses := make([]UserResponse, len(users))
 	for i, user := range users {
-		userResponses[i] = UserResponse{
-			ID:        user.ID,
-			Email:     user.Email,
-			IsAdmin:   user.IsAdmin,
-			CreatedAt: user.CreatedAt,
-		}
+		userResponses[i] = NewUserResponse(&user)
 	}
 
 	response.JSON(w, http.StatusOK, map[string]interface{}{
@@ -238,6 +228,7 @@ func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 			"page":       page,
 			"limit":      limit,
 			"totalPages": (total + limit - 1) / limit,
+			"roleCounts": roleCounts,
 		},
 	})
 }
@@ -255,17 +246,12 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 	var req UpdateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	email, err := validator.ValidateEmail(req.Email)
-	if err != nil {
-		response.Error(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	req.Email = email
 
 	user, err := h.userRepo.FindUserByID(r.Context(), userID)
 	if err != nil {
@@ -273,32 +259,35 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Email != user.Email {
-		existingUser, err := h.userRepo.FindUserByEmail(r.Context(), req.Email)
-		if err == nil && existingUser.ID != user.ID {
-			response.Error(w, http.StatusConflict, "Email already taken")
-			return
-		}
+	if !req.Role.IsValid() {
+		response.Error(w, http.StatusBadRequest, "Invalid user role")
+		return
 	}
 
-	user.Email = req.Email
-	user.IsAdmin = req.IsAdmin
+	currentUser := middleware.GetUserFromContext(r)
+	if currentUser == nil {
+		response.Error(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
+	currentUser.NormalizeAccess()
+	if currentUser.Role == models.RoleAdmin && (user.Role == models.RoleOwner || req.Role == models.RoleOwner) {
+		response.Error(w, http.StatusForbidden, "Only an owner can manage the owner role")
+		return
+	}
+
+	user.Role = req.Role
+	user.NormalizeAccess()
 
 	if err := h.userRepo.UpdateUser(r.Context(), user); err != nil {
-		if errors.Is(err, repository.ErrLastAdmin) {
-			response.Error(w, http.StatusConflict, "The last administrator cannot be demoted")
+		if errors.Is(err, repository.ErrLastOwner) {
+			response.Error(w, http.StatusConflict, "The last owner cannot be demoted")
 			return
 		}
 		response.Error(w, http.StatusInternalServerError, "Failed to update user")
 		return
 	}
 
-	response.JSON(w, http.StatusOK, UserResponse{
-		ID:        user.ID,
-		Email:     user.Email,
-		IsAdmin:   user.IsAdmin,
-		CreatedAt: user.CreatedAt,
-	})
+	response.JSON(w, http.StatusOK, NewUserResponse(user))
 }
 
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -315,15 +304,30 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	currentUser := middleware.GetUserFromContext(r)
+	if currentUser == nil {
+		response.Error(w, http.StatusUnauthorized, "Not authenticated")
+		return
+	}
 	if currentUser.ID == userID {
 		response.Error(w, http.StatusBadRequest, "Cannot delete your own account")
+		return
+	}
+	targetUser, err := h.userRepo.FindUserByID(r.Context(), userID)
+	if err != nil {
+		response.Error(w, http.StatusNotFound, "User not found")
+		return
+	}
+	currentUser.NormalizeAccess()
+	targetUser.NormalizeAccess()
+	if currentUser.Role == models.RoleAdmin && (targetUser.Role == models.RoleOwner || targetUser.Role == models.RoleAdmin) {
+		response.Error(w, http.StatusForbidden, "Only an owner can delete privileged accounts")
 		return
 	}
 
 	shortCodes, err := h.userRepo.DeleteUser(r.Context(), userID)
 	if err != nil {
-		if errors.Is(err, repository.ErrLastAdmin) {
-			response.Error(w, http.StatusConflict, "The last administrator cannot be deleted")
+		if errors.Is(err, repository.ErrLastOwner) {
+			response.Error(w, http.StatusConflict, "The last owner cannot be deleted")
 			return
 		}
 		response.Error(w, http.StatusInternalServerError, "Failed to delete user")

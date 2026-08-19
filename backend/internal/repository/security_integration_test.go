@@ -45,14 +45,14 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 	users := repository.NewUserRepository(db)
 	sessions := repository.NewSessionRepository(db)
 	urls := repository.NewUrlRepository(db)
-	first := &models.User{Email: "first@example.com", PasswordHash: "hash", IsAdmin: true}
+	first := &models.User{Email: "first@example.com", PasswordHash: "hash", Role: models.RoleOwner}
 	if err := users.BootstrapAdmin(ctx, first); err != nil {
 		t.Fatalf("bootstrap first admin: %v", err)
 	}
-	if err := users.BootstrapAdmin(ctx, &models.User{Email: "other@example.com", PasswordHash: "hash", IsAdmin: true}); !errors.Is(err, repository.ErrAdminAlreadyExists) {
+	if err := users.BootstrapAdmin(ctx, &models.User{Email: "other@example.com", PasswordHash: "hash", Role: models.RoleOwner}); !errors.Is(err, repository.ErrAdminAlreadyExists) {
 		t.Fatalf("second bootstrap error = %v", err)
 	}
-	if _, err := users.DeleteUser(ctx, first.ID); !errors.Is(err, repository.ErrLastAdmin) {
+	if _, err := users.DeleteUser(ctx, first.ID); !errors.Is(err, repository.ErrLastOwner) {
 		t.Fatalf("delete last admin error = %v", err)
 	}
 
@@ -60,7 +60,7 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 	if err := users.SaveUser(ctx, second); err != nil {
 		t.Fatalf("save second user: %v", err)
 	}
-	second.IsAdmin = true
+	second.Role = models.RoleOwner
 	if err := users.UpdateUser(ctx, second); err != nil {
 		t.Fatalf("promote second admin: %v", err)
 	}
