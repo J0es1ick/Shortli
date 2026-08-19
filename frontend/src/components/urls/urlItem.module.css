@@ -24,7 +24,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--text-secondary);
-  font: 500 10px/1.35 var(--font-mono);
+  font: 500 11px/1.35 var(--font-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -96,7 +96,7 @@
   background: transparent;
   border: 1px solid var(--line-soft);
   cursor: pointer;
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
 }
 
 .delete_confirm button:first-child {

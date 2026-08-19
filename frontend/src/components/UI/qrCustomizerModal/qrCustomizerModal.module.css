@@ -41,7 +41,7 @@
 .preview_label,
 .control_heading > span {
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.13em;
   text-transform: uppercase;
 }
@@ -96,10 +96,6 @@
   color: var(--success);
 }
 
-.preview_label .updating {
-  animation: live-pulse 900ms ease-in-out infinite;
-}
-
 .qr_preview {
   aspect-ratio: 1;
   display: grid;
@@ -124,7 +120,7 @@
 .preview_section > p {
   margin: 17px 0 22px;
   color: var(--text-muted);
-  font: 500 10px/1.55 var(--font-mono);
+  font: 500 11px/1.55 var(--font-mono);
 }
 
 .preview_actions {
@@ -200,7 +196,7 @@
   display: block;
   margin-bottom: 8px;
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -251,7 +247,7 @@
   background: transparent;
   border: 1px solid var(--line-soft);
   cursor: pointer;
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   transition: border-color 160ms ease, transform 160ms ease;
 }
 
@@ -308,7 +304,7 @@
 .upload_label small {
   margin-top: 5px;
   color: var(--text-muted);
-  font: 500 9px/1 var(--font-mono);
+  font: 500 11px/1 var(--font-mono);
 }
 
 .logo_selected {
@@ -351,7 +347,7 @@
 .error {
   margin: 20px 0 0;
   color: var(--danger);
-  font: 600 10px/1.45 var(--font-mono);
+  font: 600 11px/1.45 var(--font-mono);
 }
 
 @keyframes overlay-in {
@@ -364,12 +360,6 @@
   from {
     opacity: 0;
     transform: translateY(22px) scale(0.985);
-  }
-}
-
-@keyframes live-pulse {
-  50% {
-    opacity: 0.3;
   }
 }
 

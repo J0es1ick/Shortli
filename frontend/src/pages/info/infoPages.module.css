@@ -16,7 +16,7 @@
 .service_grid article > span,
 .status_meta > div > span {
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -37,7 +37,7 @@
 }
 .hero time {
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -61,7 +61,7 @@
 }
 .document aside a {
   color: var(--text-secondary);
-  font: 600 9px/1.3 var(--font-mono);
+  font: 600 11px/1.3 var(--font-mono);
   text-decoration: none;
   text-transform: uppercase;
 }
@@ -78,7 +78,7 @@
 }
 .document article > section > span {
   color: var(--text-muted);
-  font: 600 10px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
 }
 .document h2 {
   margin: -7px 0 22px;
@@ -114,7 +114,7 @@
   gap: 14px;
   padding: 20px;
   border: 1px solid var(--line-soft);
-  font: 700 10px/1 var(--font-mono);
+  font: 700 11px/1 var(--font-mono);
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
@@ -180,7 +180,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font: 700 9px/1 var(--font-mono);
+  font: 700 11px/1 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -218,7 +218,7 @@
   gap: 18px;
   padding: 13px 0;
   border-bottom: 1px solid var(--line-faint);
-  font: 600 9px/1.3 var(--font-mono);
+  font: 600 11px/1.3 var(--font-mono);
 }
 .check_panel dt {
   color: var(--text-muted);
@@ -244,7 +244,7 @@
   padding-top: 20px;
   color: var(--text-muted);
   border-top: 1px solid var(--line-soft);
-  font: 500 9px/1.5 var(--font-mono);
+  font: 500 11px/1.5 var(--font-mono);
 }
 
 @media (max-width: 760px) {

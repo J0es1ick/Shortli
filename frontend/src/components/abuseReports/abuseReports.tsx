@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "../../context/LocaleContext";
 import { apiUrl } from "../../lib/urls";
+import { useUser } from "../../context/UserContext";
+import { getUserRole } from "../../lib/userAccess";
 import styles from "./abuseReports.module.css";
 
 interface AbuseReport {
@@ -27,6 +29,7 @@ interface BlockedDomain {
 }
 
 export default function AbuseReports() {
+  const { user } = useUser();
   const { t, formatDate } = useLocale();
   const [reports, setReports] = useState<AbuseReport[]>([]);
   const [blockedDomains, setBlockedDomains] = useState<BlockedDomain[]>([]);
@@ -34,6 +37,8 @@ export default function AbuseReports() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const role = user ? getUserRole(user) : "user";
+  const canUnblock = role === "owner" || role === "admin";
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -237,13 +242,15 @@ export default function AbuseReports() {
             {blockedDomains.map((domain) => (
               <span key={domain.domain_id}>
                 <b>{domain.domain}</b>
-                <button
-                  type="button"
-                  disabled={busy === -domain.domain_id}
-                  onClick={() => void unblock(domain)}
-                >
-                  {t("admin.unblock")}
-                </button>
+                {canUnblock && (
+                  <button
+                    type="button"
+                    disabled={busy === -domain.domain_id}
+                    onClick={() => void unblock(domain)}
+                  >
+                    {t("admin.unblock")}
+                  </button>
+                )}
               </span>
             ))}
           </div>

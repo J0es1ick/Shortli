@@ -21,7 +21,7 @@
 .form_heading > span,
 .form_panel label > span {
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -129,7 +129,7 @@
   padding: 11px;
   color: var(--danger);
   border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
-  font: 600 10px/1.4 var(--font-mono);
+  font: 600 11px/1.4 var(--font-mono);
 }
 
 .signin_note {

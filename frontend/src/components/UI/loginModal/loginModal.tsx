@@ -10,6 +10,7 @@ interface LoginResponse {
   user_id: number;
   email: string;
   is_admin: boolean;
+  role: "owner" | "admin" | "support" | "user";
   created_at: string;
 }
 

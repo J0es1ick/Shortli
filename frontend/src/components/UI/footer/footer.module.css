@@ -14,7 +14,7 @@
 }
 
 .brand span {
-  font: 600 10px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.14em;
 }
 
@@ -57,7 +57,7 @@
   padding-top: 24px;
   border-top: 1px solid color-mix(in srgb, var(--text-inverse) 18%, transparent);
   color: color-mix(in srgb, var(--text-inverse) 52%, transparent);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.1em;
 }
 

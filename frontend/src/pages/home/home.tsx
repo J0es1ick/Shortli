@@ -39,6 +39,12 @@ export default function Home() {
               <span>{t("home.heroLine2")}</span>
             </h1>
             <p className={styles.intro}>{t("home.intro")}</p>
+            {!user && !isLoading && (
+              <Link to="/register" className={styles.hero_signup}>
+                <span>{t("home.registerFree")}</span>
+                <span aria-hidden="true">↗</span>
+              </Link>
+            )}
             <ShortenerForm />
             <div className={styles.hero_meta} aria-label={t("home.highlights")}>
               <span>{t("home.noNoise")}</span>
@@ -48,6 +54,31 @@ export default function Home() {
           </div>
           <div className={styles.visual}>
             <NetworkMesh />
+            <div className={styles.platform_console}>
+              <div className={styles.console_header}>
+                <span>{t("home.platformLabel")}</span>
+                <span>{t("home.platformOnline")}</span>
+              </div>
+              <div className={styles.console_route}>
+                <span>{t("home.platformInput")}</span>
+                <i aria-hidden="true" />
+                <strong>shortli / signal-24</strong>
+              </div>
+              <div className={styles.console_grid}>
+                {(["links", "qr", "analytics", "safety"] as const).map(
+                  (item, index) => (
+                    <div key={item}>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <strong>{t(`home.platform.${item}`)}</strong>
+                    </div>
+                  ),
+                )}
+              </div>
+              <div className={styles.console_footer}>
+                <span>{t("home.platformImmutable")}</span>
+                <span>{t("home.platformRealtime")}</span>
+              </div>
+            </div>
           </div>
         </section>
 

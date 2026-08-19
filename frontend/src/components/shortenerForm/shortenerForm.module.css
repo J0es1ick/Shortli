@@ -11,7 +11,7 @@
   display: block;
   margin-bottom: 10px;
   color: var(--text-secondary);
-  font: 600 10px/1.2 var(--font-mono);
+  font: 600 11px/1.2 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -87,7 +87,7 @@
 .note,
 .error {
   margin: 9px 0 0;
-  font: 500 10px/1.4 var(--font-mono);
+  font: 500 11px/1.45 var(--font-mono);
   letter-spacing: 0.02em;
 }
 
@@ -110,14 +110,14 @@
   gap: 16px;
   margin-bottom: 8px;
   color: var(--text-secondary);
-  font: 600 9px/1.2 var(--font-mono);
+  font: 600 11px/1.2 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .alias_header span {
   color: var(--text-muted);
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .alias_input {
@@ -141,7 +141,7 @@
   padding: 0 12px;
   color: var(--text-muted);
   border-right: 1px solid var(--line-soft);
-  font: 600 10px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
 }
 
 .alias_input input {
@@ -166,7 +166,7 @@
 .alias_block > p {
   margin: 7px 0 0;
   color: var(--text-muted);
-  font: 500 9px/1.45 var(--font-mono);
+  font: 500 11px/1.45 var(--font-mono);
 }
 
 .lifetime_block {
@@ -179,7 +179,7 @@
 .custom_expiry span {
   margin-bottom: 9px;
   color: var(--text-secondary);
-  font: 600 9px/1.2 var(--font-mono);
+  font: 600 11px/1.2 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -197,7 +197,7 @@
   background: color-mix(in srgb, var(--surface-raised) 74%, transparent);
   border: 1px solid var(--line-soft);
   cursor: pointer;
-  font: 600 10px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   transition: color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 
@@ -228,7 +228,7 @@
 .lifetime_block > p {
   margin: 8px 0 0;
   color: var(--text-muted);
-  font: 500 9px/1.45 var(--font-mono);
+  font: 500 11px/1.45 var(--font-mono);
 }
 
 .result {
@@ -251,20 +251,10 @@
 
 .result_status {
   margin-bottom: 14px;
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   opacity: 0.62;
-}
-
-.result_status i {
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  margin-right: 8px;
-  border-radius: 50%;
-  background: #61d998;
-  box-shadow: 0 0 0 4px rgba(97, 217, 152, 0.12);
 }
 
 .result_copy > a {
@@ -286,7 +276,7 @@
   overflow: hidden;
   margin: 8px 0 24px;
   color: color-mix(in srgb, var(--text-inverse) 54%, transparent);
-  font: 500 10px/1.4 var(--font-mono);
+  font: 500 11px/1.4 var(--font-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -347,7 +337,7 @@
 }
 
 .qr_button span {
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }

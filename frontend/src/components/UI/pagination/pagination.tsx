@@ -25,6 +25,7 @@ export default function Pagination({
   return (
     <div className={styles.pagination}>
       <button
+        type="button"
         disabled={page <= 1 || loading}
         onClick={() => handlePageChange(1)}
         aria-label={t("pagination.first")}
@@ -32,6 +33,7 @@ export default function Pagination({
         {"<<"}
       </button>
       <button
+        type="button"
         disabled={page <= 1 || loading}
         onClick={() => handlePageChange(page - 1)}
         aria-label={t("pagination.previous")}
@@ -40,6 +42,7 @@ export default function Pagination({
       </button>
       <span>{t("pagination.pageOf", { page, total: totalPages })}</span>
       <button
+        type="button"
         disabled={page >= totalPages || loading}
         onClick={() => handlePageChange(page + 1)}
         aria-label={t("pagination.next")}
@@ -47,6 +50,7 @@ export default function Pagination({
         {">"}
       </button>
       <button
+        type="button"
         disabled={page >= totalPages || loading}
         onClick={() => handlePageChange(totalPages)}
         aria-label={t("pagination.last")}

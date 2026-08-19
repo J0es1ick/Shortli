@@ -57,7 +57,7 @@
   position: relative;
   color: var(--text-secondary);
   text-decoration: none;
-  font: 600 10px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -104,7 +104,7 @@
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--line-soft);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.08em;
 }
 
@@ -120,7 +120,7 @@
   background: transparent;
   border: 1px solid var(--line-soft);
   cursor: pointer;
-  font: 600 8px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.06em;
   isolation: isolate;
 }
@@ -196,7 +196,7 @@
 
 .account_button span:last-child {
   color: color-mix(in srgb, var(--text-inverse) 62%, transparent);
-  font: 600 8px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -210,7 +210,7 @@
 
 .auth_loading {
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.1em;
   animation: sync-pulse 1.2s ease-in-out infinite;
 }
@@ -238,7 +238,7 @@
 
 .confirm_dialog > span {
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.12em;
 }
 
@@ -270,6 +270,7 @@
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
+  transition: color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 
 .confirm_dialog button:first-child {
@@ -280,6 +281,24 @@
 .confirm_dialog button:last-child {
   color: var(--text-inverse);
   background: var(--text-primary);
+}
+
+.confirm_dialog button:first-child:hover:not(:disabled) {
+  color: var(--text-inverse);
+  background: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.confirm_dialog button:last-child:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: transparent;
+  box-shadow: 4px 4px 0 var(--line-soft);
+  transform: translateY(-2px);
+}
+
+.confirm_dialog button:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(1px) scale(.985);
 }
 
 .confirm_dialog button:disabled {

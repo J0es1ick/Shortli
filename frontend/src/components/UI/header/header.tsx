@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTheme } from "../../../context/ThemeContext";
 import { useUser } from "../../../context/UserContext";
+import { hasStaffAccess } from "../../../lib/userAccess";
 import { useLocale } from "../../../context/LocaleContext";
 import LoginModal from "../loginModal/loginModal";
 import styles from "./header.module.css";
@@ -44,7 +45,9 @@ export function Header() {
           <a href="/#shorten">{t("header.shorten")}</a>
           <a href="/#history">{t("header.archive")}</a>
           <Link to="/developers">{t("header.api")}</Link>
-          {user?.is_admin && <Link to="/stats">{t("header.stats")}</Link>}
+          {hasStaffAccess(user) && (
+            <Link to="/stats">{t("header.control")}</Link>
+          )}
         </nav>
 
         <div className={styles.header_actions}>

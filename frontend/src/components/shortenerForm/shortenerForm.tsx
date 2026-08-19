@@ -217,7 +217,7 @@ export default function ShortenerForm() {
         <div className={styles.result} aria-live="polite">
           <div className={styles.result_copy}>
             <span className={styles.result_status}>
-              <i aria-hidden="true" /> {t("shortener.linkReady")}
+              {t("shortener.linkReady")}
             </span>
             <a href={fullShortUrl} target="_blank" rel="noopener noreferrer">
               {fullShortUrl.replace(/^https?:\/\//, "")}

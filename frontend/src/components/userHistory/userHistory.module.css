@@ -13,7 +13,7 @@
 .history_header {
   padding: 0 18px 12px;
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -49,7 +49,7 @@
 
 .item_index {
   color: var(--text-muted);
-  font: 600 10px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
 }
 
 .link_info {
@@ -76,7 +76,7 @@
 .original_url {
   overflow: hidden;
   color: var(--text-muted);
-  font: 500 10px/1.4 var(--font-mono);
+  font: 500 11px/1.4 var(--font-mono);
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -97,7 +97,7 @@
 .activity span,
 .date_info {
   color: var(--text-muted);
-  font: 500 9px/1.4 var(--font-mono);
+  font: 500 11px/1.4 var(--font-mono);
   text-transform: uppercase;
 }
 
@@ -131,7 +131,7 @@
   background: transparent;
   border: 1px solid var(--line-soft);
   cursor: pointer;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
 }
@@ -176,10 +176,36 @@
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
 }
 
 .pagination button:last-child {
   justify-self: end;
+}
+
+.pagination button:hover:not(:disabled) {
+  color: var(--text-inverse);
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  box-shadow: 4px 4px 0 var(--line-soft);
+  transform: translate(-2px, -2px);
+}
+
+.pagination button:active:not(:disabled) {
+  box-shadow: none;
+  transform: translate(0, 0) scale(0.96);
+  transition-duration: 80ms;
+}
+
+.pagination button:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 3px;
 }
 
 .pagination button:disabled {
@@ -189,8 +215,14 @@
 
 .pagination span {
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.12em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pagination button {
+    transition: none;
+  }
 }
 
 .loading,
@@ -210,7 +242,7 @@
 .loading span,
 .empty_state span {
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -246,7 +278,7 @@
   color: var(--danger);
   background: color-mix(in srgb, var(--danger) 7%, transparent);
   border: 1px solid color-mix(in srgb, var(--danger) 22%, transparent);
-  font: 600 10px/1.4 var(--font-mono);
+  font: 600 11px/1.4 var(--font-mono);
 }
 
 @keyframes spin {

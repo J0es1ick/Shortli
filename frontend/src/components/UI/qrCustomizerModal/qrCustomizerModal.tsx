@@ -260,9 +260,7 @@ export default function QRCustomizerModal({
           >
             <div className={styles.preview_label}>
               <span>{t("qr.preview")}</span>
-              <span className={loading ? styles.updating : ""}>
-                {loading ? t("qr.updating") : t("qr.live")}
-              </span>
+              <span aria-busy={loading}>{t("qr.live")}</span>
             </div>
             <div className={styles.qr_preview}>
               <canvas

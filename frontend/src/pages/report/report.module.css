@@ -18,7 +18,7 @@
 .form label > span,
 .success > span {
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -117,7 +117,7 @@
   right: 10px;
   bottom: 9px;
   color: var(--text-muted);
-  font: 600 8px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
 }
 
 .form > button,
@@ -155,7 +155,7 @@
   padding: 12px 14px;
   color: var(--danger);
   border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
-  font: 600 10px/1.5 var(--font-mono);
+  font: 600 11px/1.5 var(--font-mono);
 }
 
 .success {

@@ -6,13 +6,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { apiUrl } from "../lib/urls";
-
-interface User {
-  user_id: number;
-  email: string;
-  is_admin: boolean;
-  created_at: string;
-}
+import type { User } from "../lib/userAccess";
 
 interface UserContextType {
   user: User | null;

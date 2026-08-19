@@ -34,7 +34,7 @@
 .status_row span,
 .metrics span {
   color: var(--text-muted);
-  font: 600 9px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
   letter-spacing: 0.11em;
   text-transform: uppercase;
 }
@@ -54,7 +54,7 @@
   overflow: hidden;
   margin: 0;
   color: var(--text-muted);
-  font: 500 10px/1.4 var(--font-mono);
+  font: 500 11px/1.4 var(--font-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -100,7 +100,7 @@
   background: transparent;
   border: 1px solid var(--line-soft);
   cursor: pointer;
-  font: 600 10px/1 var(--font-mono);
+  font: 600 11px/1 var(--font-mono);
 }
 .status_row button:hover,
 .save:hover:not(:disabled) { color: var(--text-inverse); background: var(--text-primary); }
@@ -109,7 +109,7 @@
 .current_expiry,
 .privacy {
   color: var(--text-muted);
-  font: 500 9px/1.55 var(--font-mono);
+  font: 500 11px/1.55 var(--font-mono);
 }
 .safety_note { margin: 12px 0 28px; }
 .expiry_field { display: grid; gap: 9px; }
@@ -158,11 +158,11 @@
 .breakdowns section { padding: 15px; border: 1px solid var(--line-soft); }
 .breakdowns h4 { margin: 0 0 12px; font-size: 13px; font-weight: 600; }
 .breakdowns p { color: var(--text-muted); font-size: 11px; }
-.breakdown_row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line-faint); font: 500 10px/1.2 var(--font-mono); }
+.breakdown_row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line-faint); font: 500 11px/1.2 var(--font-mono); }
 .breakdown_row span { overflow: hidden; color: var(--text-secondary); text-overflow: ellipsis; white-space: nowrap; }
 .breakdown_row strong { font-weight: 700; }
 .privacy { margin: 14px 0 0; }
-.loading { min-height: 320px; display: grid; place-items: center; color: var(--text-muted); font: 600 10px/1 var(--font-mono); }
+.loading { min-height: 320px; display: grid; place-items: center; color: var(--text-muted); font: 600 11px/1 var(--font-mono); }
 .error { padding: 12px; color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); font-size: 12px; }
 
 @keyframes backdrop-in { from { opacity: 0; } }

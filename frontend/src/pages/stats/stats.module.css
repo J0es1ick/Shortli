@@ -1,3 +1,142 @@
+.page {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
 .main {
   min-height: calc(100vh - 76px);
+}
+
+.hero {
+  width: min(1400px, calc(100% - 48px));
+  min-height: 430px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(310px, .48fr);
+  gap: clamp(42px, 8vw, 130px);
+  align-items: end;
+  margin: 0 auto;
+  padding: clamp(80px, 10vw, 148px) 0 68px;
+  animation: hero-in 620ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.hero > div:first-child > span,
+.roleCard > span {
+  color: var(--text-muted);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  max-width: 880px;
+  margin: 22px 0 20px;
+  font-size: clamp(58px, 7.4vw, 112px);
+  font-weight: 400;
+  line-height: .86;
+  letter-spacing: -.066em;
+}
+
+.hero > div:first-child > p {
+  max-width: 650px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: clamp(17px, 1.5vw, 21px);
+  line-height: 1.55;
+}
+
+.roleCard {
+  min-height: 230px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 28px;
+  background: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+  border: 1px solid var(--line-soft);
+  box-shadow: var(--shadow-sm);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.roleCard:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px) rotate(-.25deg);
+}
+
+.roleCard strong {
+  margin-top: 52px;
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: -.035em;
+}
+
+.roleCard p {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.sectionNav {
+  width: min(1400px, calc(100% - 48px));
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 auto;
+  border-top: 1px solid var(--line-soft);
+  border-left: 1px solid var(--line-soft);
+}
+
+.sectionNav a {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  border-right: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+  text-decoration: none;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  transition: color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.sectionNav a::after {
+  content: "↘";
+  font-size: 17px;
+  transition: transform 180ms ease;
+}
+
+.sectionNav a:hover {
+  color: var(--text-inverse);
+  background: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.sectionNav a:hover::after {
+  transform: translate(2px, 2px);
+}
+
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    width: min(100% - 24px, 680px);
+    grid-template-columns: 1fr;
+    padding-top: 72px;
+  }
+
+  .roleCard {
+    min-height: 190px;
+  }
+
+  .sectionNav {
+    width: min(100% - 24px, 680px);
+    grid-template-columns: 1fr;
+  }
 }
