@@ -96,6 +96,9 @@ func ValidateURL(inputURL string) (string, error) {
 	}
 
 	parsed.Host = strings.ToLower(parsed.Host)
+	if parsed.Path == "" {
+		parsed.Path = "/"
+	}
 	return parsed.String(), nil
 }
 

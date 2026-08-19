@@ -137,6 +137,17 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 	requestJSON(t, client, http.MethodPost, server.URL+"/api/shorten", map[string]interface{}{
 		"original_url": "https://example.com/article", "custom_alias": "e2e-link",
 	}, http.StatusCreated)
+	requestJSON(t, client, http.MethodPost, server.URL+"/api/shorten", map[string]interface{}{
+		"original_url": "https://example.com/article", "custom_alias": "another-alias",
+	}, http.StatusOK)
+	var destinationCount int
+	if err := db.GetContext(ctx, &destinationCount, `
+		SELECT COUNT(*)
+		FROM url_info
+		WHERE original_url = 'https://example.com/article' AND user_id IS NOT NULL
+	`); err != nil || destinationCount != 1 {
+		t.Fatalf("destination link count = %d, err = %v", destinationCount, err)
+	}
 	redirectResponse, err := client.Get(server.URL + "/e2e-link")
 	if err != nil {
 		t.Fatalf("request redirect: %v", err)

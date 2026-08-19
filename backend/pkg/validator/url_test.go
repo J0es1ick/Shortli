@@ -55,6 +55,20 @@ func TestValidateURLRejectsUnsafeDestinations(t *testing.T) {
 	}
 }
 
+func TestValidateURLNormalizesRootPath(t *testing.T) {
+	withoutSlash, err := ValidateURL("HTTPS://Example.COM")
+	if err != nil {
+		t.Fatalf("ValidateURL returned error: %v", err)
+	}
+	withSlash, err := ValidateURL("https://example.com/")
+	if err != nil {
+		t.Fatalf("ValidateURL returned error: %v", err)
+	}
+	if withoutSlash != "https://example.com/" || withoutSlash != withSlash {
+		t.Fatalf("normalized URLs differ: %q and %q", withoutSlash, withSlash)
+	}
+}
+
 func TestValidateAccountCredentials(t *testing.T) {
 	if email, err := ValidateEmail("  User@Example.com "); err != nil || email != "user@example.com" {
 		t.Fatalf("ValidateEmail returned %q, %v", email, err)

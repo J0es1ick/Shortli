@@ -189,16 +189,26 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	customAlias, err := validator.ValidateShortCode(req.CustomAlias)
-	if err != nil {
-		response.Error(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
 	user := middleware.GetUserFromContext(r)
 	var userID *int
 	if user != nil {
 		userID = &user.ID
+	}
+	existingURL, lookupErr := h.urlRepository.FindUrlByOriginalForOwner(r.Context(), req.OriginalURL, userID)
+	if lookupErr == nil {
+		h.redirectCache.Set(existingURL)
+		h.writeShortenResponse(w, r, http.StatusOK, existingURL)
+		return
+	}
+	if !errors.Is(lookupErr, sql.ErrNoRows) {
+		response.Error(w, http.StatusInternalServerError, "Failed to check existing URL")
+		return
+	}
+
+	customAlias, err := validator.ValidateShortCode(req.CustomAlias)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	var shortCode string
@@ -248,7 +258,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		IsActive:    true,
 	}
 
-	id, err := h.urlRepository.SaveUrl(r.Context(), url)
+	savedURL, created, err := h.urlRepository.FindOrSaveUrl(r.Context(), url)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			if customAlias != "" {
@@ -261,10 +271,13 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusInternalServerError, "Failed to save URL")
 		return
 	}
-	url.ID = int(id)
-	h.redirectCache.Set(url)
+	h.redirectCache.Set(savedURL)
 
-	h.writeShortenResponse(w, r, http.StatusCreated, url)
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	h.writeShortenResponse(w, r, status, savedURL)
 }
 
 func (h *Handler) UserHistory(w http.ResponseWriter, r *http.Request) {

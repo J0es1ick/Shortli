@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/J0es1ick/shortli/internal/models"
@@ -67,6 +68,88 @@ func (r *UrlRepository) SaveUrl(ctx context.Context, url *models.URL) (int64, er
 	}
 
 	return id, nil
+}
+
+func (r *UrlRepository) FindUrlByOriginalForOwner(ctx context.Context, originalURL string, userID *int) (*models.URL, error) {
+	url := &models.URL{}
+	err := r.db.GetContext(ctx, url, `
+		SELECT `+urlColumns+`
+		FROM url_info
+		WHERE original_url = $1
+		  AND user_id IS NOT DISTINCT FROM $2::INTEGER
+		  AND ($2::INTEGER IS NOT NULL OR (is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())))
+		ORDER BY created_at DESC, url_id DESC
+		LIMIT 1
+	`, originalURL, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("url not found: %w", sql.ErrNoRows)
+		}
+		return nil, fmt.Errorf("find URL by owner and destination: %w", err)
+	}
+	return url, nil
+}
+
+func (r *UrlRepository) FindOrSaveUrl(ctx context.Context, url *models.URL) (*models.URL, bool, error) {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, false, fmt.Errorf("begin idempotent URL creation: %w", err)
+	}
+	defer tx.Rollback()
+
+	ownerKey := "guest"
+	if url.UserID != nil {
+		ownerKey = strconv.Itoa(*url.UserID)
+	}
+	lockKey := ownerKey + "\x00" + url.OriginalURL
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, lockKey); err != nil {
+		return nil, false, fmt.Errorf("lock URL creation: %w", err)
+	}
+
+	existing := &models.URL{}
+	err = tx.GetContext(ctx, existing, `
+		SELECT `+urlColumns+`
+		FROM url_info
+		WHERE original_url = $1
+		  AND user_id IS NOT DISTINCT FROM $2::INTEGER
+		  AND ($2::INTEGER IS NOT NULL OR (is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())))
+		ORDER BY created_at DESC, url_id DESC
+		LIMIT 1
+	`, url.OriginalURL, url.UserID)
+	if err == nil {
+		if err := tx.Commit(); err != nil {
+			return nil, false, fmt.Errorf("commit existing URL lookup: %w", err)
+		}
+		return existing, false, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, false, fmt.Errorf("find existing URL during creation: %w", err)
+	}
+
+	err = tx.QueryRowContext(ctx, `
+		INSERT INTO url_info
+			(original_url, short_code, user_id, click_count, created_at, expires_at, is_active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING url_id
+	`,
+		url.OriginalURL,
+		url.ShortCode,
+		url.UserID,
+		url.ClickCount,
+		url.CreatedAt,
+		url.ExpiresAt,
+		url.IsActive,
+	).Scan(&url.ID)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return nil, false, fmt.Errorf("url with this code already exists")
+		}
+		return nil, false, fmt.Errorf("insert URL during idempotent creation: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, false, fmt.Errorf("commit URL creation: %w", err)
+	}
+	return url, true, nil
 }
 
 func (r *UrlRepository) FindAllUrl(ctx context.Context, limit, offset int) ([]models.URL, error) {
