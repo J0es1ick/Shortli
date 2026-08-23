@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"math"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -116,8 +118,18 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 		}
 		entry.requests = validRequests
 		entry.lastSeen = now
+		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(rl.limit))
 		if len(entry.requests) >= rl.limit {
 			rl.requests[clientIP] = entry
+			retryAfter := 1
+			if len(entry.requests) > 0 {
+				retryAfter = int(math.Ceil(entry.requests[0].Add(rl.window).Sub(now).Seconds()))
+				if retryAfter < 1 {
+					retryAfter = 1
+				}
+			}
+			w.Header().Set("X-RateLimit-Remaining", "0")
+			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 			rl.mux.Unlock()
 			response.Error(w, http.StatusTooManyRequests, "Rate limit exceeded")
 			return
@@ -125,6 +137,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 
 		entry.requests = append(entry.requests, now)
 		rl.requests[clientIP] = entry
+		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(rl.limit-len(entry.requests)))
 		rl.mux.Unlock()
 		next.ServeHTTP(w, r)
 	})

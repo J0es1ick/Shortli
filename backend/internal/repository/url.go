@@ -101,7 +101,7 @@ func (r *UrlRepository) FindOrSaveUrl(ctx context.Context, url *models.URL) (*mo
 	if url.UserID != nil {
 		ownerKey = strconv.Itoa(*url.UserID)
 	}
-	lockKey := ownerKey + "\x00" + url.OriginalURL
+	lockKey := fmt.Sprintf("%d:%s%s", len(ownerKey), ownerKey, url.OriginalURL)
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, lockKey); err != nil {
 		return nil, false, fmt.Errorf("lock URL creation: %w", err)
 	}

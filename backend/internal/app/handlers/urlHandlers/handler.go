@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -260,6 +261,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 
 	savedURL, created, err := h.urlRepository.FindOrSaveUrl(r.Context(), url)
 	if err != nil {
+		log.Printf("shorten storage failure: %v", err)
 		if strings.Contains(err.Error(), "already exists") {
 			if customAlias != "" {
 				response.Error(w, http.StatusConflict, "Custom alias is already in use")

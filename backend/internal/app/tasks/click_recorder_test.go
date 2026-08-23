@@ -29,7 +29,7 @@ func (s *fakeClickStore) RecordClickContext(_ context.Context, event *models.Cli
 func TestClickRecorderRecoversDurableEventAfterRestart(t *testing.T) {
 	spool := t.TempDir()
 	failingStore := &fakeClickStore{fail: true, events: map[string]int{}}
-	first, err := NewClickRecorder(failingStore, spool, 1)
+	first, err := NewClickRecorder(failingStore, spool, 1, 1<<20)
 	if err != nil {
 		t.Fatalf("create first recorder: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestClickRecorderRecoversDurableEventAfterRestart(t *testing.T) {
 	}
 
 	healthyStore := &fakeClickStore{events: map[string]int{}}
-	second, err := NewClickRecorder(healthyStore, spool, 1)
+	second, err := NewClickRecorder(healthyStore, spool, 1, 1<<20)
 	if err != nil {
 		t.Fatalf("create recovered recorder: %v", err)
 	}
@@ -73,5 +73,25 @@ func TestClickRecorderRecoversDurableEventAfterRestart(t *testing.T) {
 		if count != 1 {
 			t.Fatalf("event recorded %d times, want once", count)
 		}
+	}
+}
+
+func TestClickRecorderRejectsEventsBeyondCapacity(t *testing.T) {
+	store := &fakeClickStore{fail: true, events: map[string]int{}}
+	recorder, err := NewClickRecorder(store, t.TempDir(), 1, 1)
+	if err != nil {
+		t.Fatalf("create recorder: %v", err)
+	}
+	if err := recorder.Submit(&models.ClickEvent{URLID: 42, ClickedAt: time.Now()}); !errors.Is(err, ErrClickSpoolFull) {
+		t.Fatalf("Submit() error = %v, want ErrClickSpoolFull", err)
+	}
+	stats := recorder.Stats()
+	if stats.Pending != 0 || stats.Dropped != 1 || stats.MaxBytes != 1 {
+		t.Fatalf("capacity stats = %+v", stats)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := recorder.Close(ctx); err != nil {
+		t.Fatalf("close recorder: %v", err)
 	}
 }

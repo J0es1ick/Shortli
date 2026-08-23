@@ -51,8 +51,9 @@ func SetupRoutes(
 	mux.HandleFunc("GET /api/metrics", metrics.Handler(cfg.MetricsToken, func() middleware.ClickQueueMetrics {
 		stats := clickRecorder.Stats()
 		return middleware.ClickQueueMetrics{
-			Pending: stats.Pending, Queued: stats.Queued,
-			Recorded: stats.Recorded, Retried: stats.Retried,
+			Pending: stats.Pending, PendingBytes: stats.PendingBytes,
+			MaxBytes: stats.MaxBytes, Queued: stats.Queued,
+			Recorded: stats.Recorded, Retried: stats.Retried, Dropped: stats.Dropped,
 		}
 	}))
 	mux.Handle("POST /api/shorten", shortenLimiter.Middleware(http.HandlerFunc(urlHandler.Shorten)))

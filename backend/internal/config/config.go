@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,6 +24,7 @@ type Config struct {
 	RequestTimeout         int      `mapstructure:"REQUEST_TIMEOUT_SECONDS"`
 	AnalyticsSalt          string   `mapstructure:"ANALYTICS_SALT"`
 	ClickSpoolPath         string   `mapstructure:"CLICK_SPOOL_PATH"`
+	ClickSpoolMaxBytes     int64    `mapstructure:"CLICK_SPOOL_MAX_BYTES"`
 	MetricsToken           string   `mapstructure:"METRICS_TOKEN"`
 	ShutdownTimeout        int      `mapstructure:"SHUTDOWN_TIMEOUT_SECONDS"`
 	AnalyticsRetentionDays int      `mapstructure:"ANALYTICS_RETENTION_DAYS"`
@@ -63,6 +65,7 @@ func InitConfig() (*Config, error) {
 	v.SetDefault("REQUEST_TIMEOUT_SECONDS", 10)
 	v.SetDefault("ANALYTICS_SALT", "shortli-local-development")
 	v.SetDefault("CLICK_SPOOL_PATH", ".runtime/click-spool")
+	v.SetDefault("CLICK_SPOOL_MAX_BYTES", 268435456)
 	v.SetDefault("METRICS_TOKEN", "")
 	v.SetDefault("SHUTDOWN_TIMEOUT_SECONDS", 20)
 	v.SetDefault("ANALYTICS_RETENTION_DAYS", 365)
@@ -152,6 +155,9 @@ func (c *Config) validate() error {
 	if c.ReportRetentionDays < 30 || c.ReportRetentionDays > 3650 {
 		return fmt.Errorf("REPORT_RETENTION_DAYS must be between 30 and 3650")
 	}
+	if c.ClickSpoolMaxBytes < 1<<20 || c.ClickSpoolMaxBytes > 10<<30 {
+		return fmt.Errorf("CLICK_SPOOL_MAX_BYTES must be between 1 MiB and 10 GiB")
+	}
 
 	if c.AppEnv == "production" {
 		if len(c.Database.Password) < 12 || c.Database.Password == "12345" {
@@ -166,6 +172,21 @@ func (c *Config) validate() error {
 		if c.FrontendOrigin == "" {
 			return fmt.Errorf("FRONTEND_ORIGIN is required in production")
 		}
+		publicURL, err := url.Parse(c.PublicBaseURL)
+		if err != nil || publicURL.Hostname() == "" || !isHTTPScheme(publicURL.Scheme) {
+			return fmt.Errorf("PUBLIC_BASE_URL must be an absolute HTTP or HTTPS URL")
+		}
+		frontendURL, err := url.Parse(c.FrontendOrigin)
+		if err != nil || frontendURL.Hostname() == "" || !isHTTPScheme(frontendURL.Scheme) {
+			return fmt.Errorf("FRONTEND_ORIGIN must be an absolute HTTP or HTTPS URL")
+		}
+		localOnly := isLoopbackHost(publicURL.Hostname()) && isLoopbackHost(frontendURL.Hostname())
+		if !localOnly && (publicURL.Scheme != "https" || frontendURL.Scheme != "https") {
+			return fmt.Errorf("PUBLIC_BASE_URL and FRONTEND_ORIGIN must use HTTPS in production")
+		}
+		if !localOnly && !c.CookieSecure {
+			return fmt.Errorf("COOKIE_SECURE must be true for a public production deployment")
+		}
 		if len(c.MetricsToken) < 24 {
 			return fmt.Errorf("METRICS_TOKEN must be at least 24 characters in production")
 		}
@@ -174,4 +195,16 @@ func (c *Config) validate() error {
 		}
 	}
 	return nil
+}
+
+func isHTTPScheme(scheme string) bool {
+	return scheme == "http" || scheme == "https"
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

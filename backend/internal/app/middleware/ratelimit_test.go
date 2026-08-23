@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestClientIPResolverIgnoresUntrustedHeaders(t *testing.T) {
@@ -12,6 +14,31 @@ func TestClientIPResolverIgnoresUntrustedHeaders(t *testing.T) {
 	request.Header.Set("X-Forwarded-For", "198.51.100.7")
 	if actual := resolver.Resolve(request); actual != "203.0.113.10" {
 		t.Fatalf("Resolve() = %q, want direct peer", actual)
+	}
+}
+
+func TestRateLimiterReturnsLimitHeadersAndRejectsOverflow(t *testing.T) {
+	limiter := NewRateLimiter(2, time.Minute, NewClientIPResolver(""))
+	handler := limiter.Middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	for attempt := 1; attempt <= 3; attempt++ {
+		request := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
+		request.RemoteAddr = "203.0.113.10:443"
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Header().Get("X-RateLimit-Limit") != "2" {
+			t.Fatalf("attempt %d limit header = %q", attempt, response.Header().Get("X-RateLimit-Limit"))
+		}
+		if attempt < 3 && response.Code != http.StatusNoContent {
+			t.Fatalf("attempt %d status = %d", attempt, response.Code)
+		}
+		if attempt == 3 {
+			if response.Code != http.StatusTooManyRequests || response.Header().Get("Retry-After") == "" {
+				t.Fatalf("overflow response = %d, retry-after = %q", response.Code, response.Header().Get("Retry-After"))
+			}
+		}
 	}
 }
 

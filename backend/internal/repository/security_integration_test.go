@@ -19,7 +19,7 @@ import (
 	"github.com/J0es1ick/shortli/internal/database"
 	"github.com/J0es1ick/shortli/internal/models"
 	"github.com/J0es1ick/shortli/internal/repository"
-	_ "github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -96,7 +96,7 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 
 	apiKeys := repository.NewAPIKeyRepository(db)
 	abuse := repository.NewAbuseRepository(db)
-	clickRecorder, err := tasks.NewClickRecorder(urls, t.TempDir(), 1)
+	clickRecorder, err := tasks.NewClickRecorder(urls, t.TempDir(), 1, 1<<20)
 	if err != nil {
 		t.Fatalf("create click recorder: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 			AnalyticsSalt: "0123456789abcdef0123456789abcdef", RequestTimeout: 5,
 		},
 		urls, users, sessions, apiKeys, abuse, clickRecorder,
-		middleware.NewMetricsRegistry(clientIP), clientIP,
+		middleware.NewMetricsRegistry(clientIP, "0123456789abcdef0123456789abcdef"), clientIP,
 	)
 	server := httptest.NewServer(handler)
 	defer server.Close()
@@ -148,6 +148,16 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 	`); err != nil || destinationCount != 1 {
 		t.Fatalf("destination link count = %d, err = %v", destinationCount, err)
 	}
+	keyPayload := requestJSONResult(t, client, http.MethodPost, server.URL+"/api/developer/keys", map[string]interface{}{
+		"name": "integration test",
+	}, nil, http.StatusCreated)
+	rawKey, ok := keyPayload["key"].(string)
+	if !ok || rawKey == "" {
+		t.Fatalf("API key response = %v", keyPayload)
+	}
+	requestJSONResult(t, client, http.MethodPost, server.URL+"/api/v1/links", map[string]interface{}{
+		"original_url": "https://example.com/api", "custom_alias": "api-link",
+	}, map[string]string{"X-API-Key": rawKey}, http.StatusCreated)
 	redirectResponse, err := client.Get(server.URL + "/e2e-link")
 	if err != nil {
 		t.Fatalf("request redirect: %v", err)
@@ -160,6 +170,8 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 		"old_password": "member-password-42", "new_password": "new-member-password-43",
 	}, http.StatusOK)
 	requestJSON(t, client, http.MethodGet, server.URL+"/api/me", nil, http.StatusUnauthorized)
+	requestJSONResult(t, client, http.MethodGet, server.URL+"/api/v1/links/api-link", nil,
+		map[string]string{"X-API-Key": rawKey}, http.StatusUnauthorized)
 	requestJSON(t, client, http.MethodPost, server.URL+"/api/login", map[string]interface{}{
 		"email": "member@example.com", "password": "new-member-password-43",
 	}, http.StatusOK)
@@ -176,6 +188,11 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 
 func requestJSON(t *testing.T, client *http.Client, method, requestURL string, body map[string]interface{}, expectedStatus int) {
 	t.Helper()
+	requestJSONResult(t, client, method, requestURL, body, nil, expectedStatus)
+}
+
+func requestJSONResult(t *testing.T, client *http.Client, method, requestURL string, body map[string]interface{}, headers map[string]string, expectedStatus int) map[string]interface{} {
+	t.Helper()
 	var requestBody bytes.Buffer
 	if body != nil {
 		if err := json.NewEncoder(&requestBody).Encode(body); err != nil {
@@ -189,6 +206,9 @@ func requestJSON(t *testing.T, client *http.Client, method, requestURL string, b
 	if body != nil {
 		request.Header.Set("Content-Type", "application/json")
 	}
+	for name, value := range headers {
+		request.Header.Set(name, value)
+	}
 	response, err := client.Do(request)
 	if err != nil {
 		t.Fatalf("perform %s %s: %v", method, requestURL, err)
@@ -199,4 +219,9 @@ func requestJSON(t *testing.T, client *http.Client, method, requestURL string, b
 		_ = json.NewDecoder(response.Body).Decode(&payload)
 		t.Fatalf("%s %s status = %d, payload = %v", method, requestURL, response.StatusCode, payload)
 	}
+	payload := map[string]interface{}{}
+	if response.ContentLength != 0 {
+		_ = json.NewDecoder(response.Body).Decode(&payload)
+	}
+	return payload
 }

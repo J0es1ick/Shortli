@@ -4,18 +4,16 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jackc/pgconn"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-func TestIsUniqueViolationSupportsBothPostgresDrivers(t *testing.T) {
+func TestIsUniqueViolation(t *testing.T) {
 	cases := []struct {
 		name string
 		err  error
 		want bool
 	}{
 		{name: "pgx", err: &pgconn.PgError{Code: "23505"}, want: true},
-		{name: "libpq", err: &pq.Error{Code: "23505"}, want: true},
 		{name: "other postgres error", err: &pgconn.PgError{Code: "23503"}, want: false},
 		{name: "generic", err: errors.New("duplicate-ish text"), want: false},
 	}

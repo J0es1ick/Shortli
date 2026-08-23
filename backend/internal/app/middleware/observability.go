@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -26,21 +28,26 @@ type MetricsRegistry struct {
 	requests  map[metricKey]uint64
 	durations map[metricKey]time.Duration
 	resolver  *ClientIPResolver
+	logSalt   []byte
 }
 
 type ClickQueueMetrics struct {
-	Pending  int64
-	Queued   int64
-	Recorded int64
-	Retried  int64
+	Pending      int64
+	PendingBytes int64
+	MaxBytes     int64
+	Queued       int64
+	Recorded     int64
+	Retried      int64
+	Dropped      int64
 }
 
-func NewMetricsRegistry(resolver *ClientIPResolver) *MetricsRegistry {
+func NewMetricsRegistry(resolver *ClientIPResolver, logSalt string) *MetricsRegistry {
 	return &MetricsRegistry{
 		startedAt: time.Now(),
 		requests:  make(map[metricKey]uint64),
 		durations: make(map[metricKey]time.Duration),
 		resolver:  resolver,
+		logSalt:   []byte(logSalt),
 	}
 }
 
@@ -66,9 +73,9 @@ func (m *MetricsRegistry) Middleware(next http.Handler) http.Handler {
 		m.durations[key] += duration
 		m.mu.Unlock()
 		log.Printf(
-			"request_id=%s method=%s pattern=%q status=%d duration_ms=%d remote_ip=%s",
+			"request_id=%s method=%s pattern=%q status=%d duration_ms=%d client_id=%s",
 			requestID, r.Method, pattern, recorder.status, duration.Milliseconds(),
-			m.resolver.Resolve(r),
+			m.clientID(r),
 		)
 	})
 }
@@ -113,17 +120,30 @@ func (m *MetricsRegistry) Handler(token string, clickStats func() ClickQueueMetr
 		stats := clickStats()
 		fmt.Fprintln(w, "# TYPE shortli_click_spool_pending gauge")
 		fmt.Fprintf(w, "shortli_click_spool_pending %d\n", stats.Pending)
+		fmt.Fprintln(w, "# TYPE shortli_click_spool_bytes gauge")
+		fmt.Fprintf(w, "shortli_click_spool_bytes %d\n", stats.PendingBytes)
+		fmt.Fprintln(w, "# TYPE shortli_click_spool_max_bytes gauge")
+		fmt.Fprintf(w, "shortli_click_spool_max_bytes %d\n", stats.MaxBytes)
 		fmt.Fprintln(w, "# TYPE shortli_click_events_queued_total counter")
 		fmt.Fprintf(w, "shortli_click_events_queued_total %d\n", stats.Queued)
 		fmt.Fprintln(w, "# TYPE shortli_click_events_recorded_total counter")
 		fmt.Fprintf(w, "shortli_click_events_recorded_total %d\n", stats.Recorded)
 		fmt.Fprintln(w, "# TYPE shortli_click_events_retried_total counter")
 		fmt.Fprintf(w, "shortli_click_events_retried_total %d\n", stats.Retried)
+		fmt.Fprintln(w, "# TYPE shortli_click_events_dropped_total counter")
+		fmt.Fprintf(w, "shortli_click_events_dropped_total %d\n", stats.Dropped)
 		fmt.Fprintln(w, "# TYPE shortli_process_uptime_seconds gauge")
 		fmt.Fprintf(w, "shortli_process_uptime_seconds %.0f\n", time.Since(m.startedAt).Seconds())
 		fmt.Fprintln(w, "# TYPE shortli_go_goroutines gauge")
 		fmt.Fprintf(w, "shortli_go_goroutines %d\n", runtime.NumGoroutine())
 	}
+}
+
+func (m *MetricsRegistry) clientID(r *http.Request) string {
+	digest := hmac.New(sha256.New, m.logSalt)
+	_, _ = digest.Write([]byte("request-log\x00"))
+	_, _ = digest.Write([]byte(m.resolver.Resolve(r)))
+	return hex.EncodeToString(digest.Sum(nil)[:16])
 }
 
 type statusRecorder struct {

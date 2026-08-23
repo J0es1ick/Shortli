@@ -47,12 +47,12 @@ func main() {
 	apiKeyRepo := repository.NewAPIKeyRepository(db.DB)
 	abuseRepo := repository.NewAbuseRepository(db.DB)
 	maintenanceRepo := repository.NewMaintenanceRepository(db.DB)
-	clickRecorder, err := tasks.NewClickRecorder(urlRepo, cfg.ClickSpoolPath, 2)
+	clickRecorder, err := tasks.NewClickRecorder(urlRepo, cfg.ClickSpoolPath, 2, cfg.ClickSpoolMaxBytes)
 	if err != nil {
 		log.Fatalf("Failed to initialize durable click recorder: %v", err)
 	}
 	clientIP := middleware.NewClientIPResolver(cfg.TrustedProxyCIDRs)
-	metrics := middleware.NewMetricsRegistry(clientIP)
+	metrics := middleware.NewMetricsRegistry(clientIP, cfg.AnalyticsSalt)
 	handler := routes.SetupRoutes(
 		cfg, urlRepo, userRepo, sessionRepo, apiKeyRepo,
 		abuseRepo, clickRecorder, metrics, clientIP,

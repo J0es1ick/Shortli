@@ -19,16 +19,23 @@ import (
 )
 
 type ClickRecorderStats struct {
-	Pending  int64 `json:"pending"`
-	Queued   int64 `json:"queued"`
-	Recorded int64 `json:"recorded"`
-	Retried  int64 `json:"retried"`
+	Pending      int64 `json:"pending"`
+	PendingBytes int64 `json:"pending_bytes"`
+	MaxBytes     int64 `json:"max_bytes"`
+	Queued       int64 `json:"queued"`
+	Recorded     int64 `json:"recorded"`
+	Retried      int64 `json:"retried"`
+	Dropped      int64 `json:"dropped"`
 }
+
+var ErrClickSpoolFull = errors.New("click spool capacity exceeded")
 
 type ClickRecorder struct {
 	repo      clickStore
 	spoolPath string
 	workers   int
+	maxBytes  int64
+	spoolMu   sync.Mutex
 	wake      chan struct{}
 	stop      chan struct{}
 	force     chan struct{}
@@ -39,15 +46,19 @@ type ClickRecorder struct {
 	queued    atomic.Int64
 	recorded  atomic.Int64
 	retried   atomic.Int64
+	dropped   atomic.Int64
 }
 
 type clickStore interface {
 	RecordClickContext(context.Context, *models.ClickEvent) error
 }
 
-func NewClickRecorder(repo clickStore, spoolPath string, workers int) (*ClickRecorder, error) {
+func NewClickRecorder(repo clickStore, spoolPath string, workers int, maxBytes int64) (*ClickRecorder, error) {
 	if workers < 1 {
 		workers = 1
+	}
+	if maxBytes < 1 {
+		return nil, errors.New("click spool capacity must be positive")
 	}
 	if err := os.MkdirAll(spoolPath, 0o750); err != nil {
 		return nil, fmt.Errorf("create click spool: %w", err)
@@ -57,7 +68,7 @@ func NewClickRecorder(repo clickStore, spoolPath string, workers int) (*ClickRec
 	}
 
 	recorder := &ClickRecorder{
-		repo: repo, spoolPath: spoolPath, workers: workers,
+		repo: repo, spoolPath: spoolPath, workers: workers, maxBytes: maxBytes,
 		wake: make(chan struct{}, 1), stop: make(chan struct{}), force: make(chan struct{}),
 	}
 	recorder.accepting.Store(true)
@@ -83,6 +94,17 @@ func (r *ClickRecorder) Submit(event *models.ClickEvent) error {
 	if err != nil {
 		return fmt.Errorf("encode click event: %w", err)
 	}
+	r.spoolMu.Lock()
+	defer r.spoolMu.Unlock()
+	usage, err := r.spoolSize()
+	if err != nil {
+		return fmt.Errorf("measure click spool: %w", err)
+	}
+	if int64(len(body)) > r.maxBytes-usage {
+		r.dropped.Add(1)
+		return ErrClickSpoolFull
+	}
+
 	pendingPath := filepath.Join(r.spoolPath, eventKey+".pending.json")
 	tempPath := pendingPath + ".tmp"
 	if err := writeAndSync(tempPath, body); err != nil {
@@ -115,9 +137,11 @@ func writeAndSync(path string, body []byte) error {
 
 func (r *ClickRecorder) Stats() ClickRecorderStats {
 	pending, _ := r.pendingCount()
+	pendingBytes, _ := r.spoolSize()
 	return ClickRecorderStats{
-		Pending: pending, Queued: r.queued.Load(),
-		Recorded: r.recorded.Load(), Retried: r.retried.Load(),
+		Pending: pending, PendingBytes: pendingBytes, MaxBytes: r.maxBytes,
+		Queued: r.queued.Load(), Recorded: r.recorded.Load(),
+		Retried: r.retried.Load(), Dropped: r.dropped.Load(),
 	}
 }
 
@@ -243,6 +267,25 @@ func (r *ClickRecorder) pendingCount() (int64, error) {
 	return count, nil
 }
 
+func (r *ClickRecorder) spoolSize() (int64, error) {
+	entries, err := os.ReadDir(r.spoolPath)
+	if err != nil {
+		return 0, err
+	}
+	var size int64
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return 0, err
+		}
+		size += info.Size()
+	}
+	return size, nil
+}
+
 func (r *ClickRecorder) signal() {
 	select {
 	case r.wake <- struct{}{}:
@@ -256,6 +299,12 @@ func recoverProcessingFiles(spoolPath string) error {
 		return fmt.Errorf("scan click spool during recovery: %w", err)
 	}
 	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".pending.json.tmp") {
+			if err := os.Remove(filepath.Join(spoolPath, entry.Name())); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("remove incomplete click event %s: %w", entry.Name(), err)
+			}
+			continue
+		}
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".processing.json") {
 			continue
 		}
