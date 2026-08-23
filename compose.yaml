@@ -8,7 +8,7 @@ x-logging: &default-logging
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.14-alpine3.24@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-shortli}
@@ -28,6 +28,11 @@ services:
     networks:
       - shortli-internal
     logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 768m
+    cpus: 1.5
 
   backend:
     build:
@@ -55,6 +60,7 @@ services:
       ANALYTICS_SALT: ${ANALYTICS_SALT:?Set ANALYTICS_SALT in the root .env}
       METRICS_TOKEN: ${METRICS_TOKEN:?Set METRICS_TOKEN in the root .env}
       CLICK_SPOOL_PATH: /var/lib/shortli/click-spool
+      CLICK_SPOOL_MAX_BYTES: ${CLICK_SPOOL_MAX_BYTES:-268435456}
       SHUTDOWN_TIMEOUT_SECONDS: "25"
       ANALYTICS_RETENTION_DAYS: ${ANALYTICS_RETENTION_DAYS:-365}
       REPORT_RETENTION_DAYS: ${REPORT_RETENTION_DAYS:-180}
@@ -62,6 +68,14 @@ services:
       - "43178"
     volumes:
       - shortli-click-spool:/var/lib/shortli/click-spool
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    mem_limit: 384m
+    cpus: 1.0
     tmpfs:
       - /tmp:size=32m,mode=1777
     depends_on:
@@ -90,10 +104,18 @@ services:
       backend:
         condition: service_healthy
     read_only: true
+    user: "101:101"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    mem_limit: 192m
+    cpus: 0.75
     tmpfs:
-      - /var/cache/nginx:size=32m
-      - /var/run:size=4m
-      - /tmp:size=16m
+      - /var/cache/nginx:size=32m,mode=1777
+      - /var/run:size=4m,mode=1777
+      - /tmp:size=16m,mode=1777
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/"]
       interval: 10s
