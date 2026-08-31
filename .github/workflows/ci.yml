@@ -27,6 +27,7 @@ jobs:
           cache-dependency-path: backend/go.sum
       - run: go test -race ./...
       - run: go vet ./...
+      - run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
 
   frontend:
@@ -75,7 +76,7 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      - run: go test -race ./internal/repository -run TestSecurityLifecycleWithPostgres -count=1
+      - run: go test -race -coverpkg=github.com/J0es1ick/shortli/internal/app/... -coverprofile=integration-cover.out ./internal/app/routes -run='^TestSecurityLifecycleWithPostgres$' -count=1
 
   secrets:
     runs-on: ubuntu-latest
@@ -93,24 +94,32 @@ jobs:
     timeout-minutes: 25
     env:
       POSTGRES_PASSWORD: ci-postgres-password
+      DATABASE_USER: shortli_app
       ANALYTICS_SALT: ci-analytics-salt-at-least-32-characters
       METRICS_TOKEN: ci-metrics-token-at-least-24-chars
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - run: docker compose config --quiet
-      - run: docker build -t shortli-backend:test backend
-      - run: docker build -t shortli-frontend:test frontend
+      - run: docker build -t shortli-backend:local backend
+      - run: docker build -t shortli-web:local frontend
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
-          image-ref: shortli-backend:test
+          image-ref: shortli-backend:local
           format: table
           exit-code: "1"
           severity: HIGH,CRITICAL
           ignore-unfixed: true
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
-          image-ref: shortli-frontend:test
+          image-ref: shortli-web:local
           format: table
           exit-code: "1"
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+      - run: docker compose up -d --no-build --wait
+      - run: curl --fail --retry 10 --retry-delay 2 http://127.0.0.1:43176/api/health/ready
+      - run: |
+          role_is_privileged="$(docker compose exec -T postgres psql -U shortli -d shortli -tAc "SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR has_schema_privilege('shortli_app', 'public', 'CREATE') FROM pg_roles WHERE rolname = 'shortli_app'")"
+          test "$role_is_privileged" = "f"
+      - if: always()
+        run: docker compose down -v

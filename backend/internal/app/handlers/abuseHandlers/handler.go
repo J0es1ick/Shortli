@@ -233,17 +233,17 @@ func (h *Handler) hashIP(value string) string {
 func extractShortCode(value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return "", fmt.Errorf("Enter a short link or code")
+		return "", fmt.Errorf("enter a short link or code")
 	}
 	if parsed, err := url.Parse(value); err == nil && parsed.Host != "" {
 		value = strings.Trim(parsed.Path, "/")
 	}
 	if strings.Contains(value, "/") {
-		return "", fmt.Errorf("Enter a valid Shortli link")
+		return "", fmt.Errorf("enter a valid Shortli link")
 	}
 	code := strings.ToLower(strings.TrimSpace(value))
 	if len(code) < 3 || len(code) > 100 {
-		return "", fmt.Errorf("Enter a valid short code")
+		return "", fmt.Errorf("enter a valid short code")
 	}
 	return code, nil
 }

@@ -1,4 +1,4 @@
-package repository_test
+package routes_test
 
 import (
 	"bytes"
@@ -96,7 +96,7 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 
 	apiKeys := repository.NewAPIKeyRepository(db)
 	abuse := repository.NewAbuseRepository(db)
-	clickRecorder, err := tasks.NewClickRecorder(urls, t.TempDir(), 1, 1<<20)
+	clickRecorder, err := tasks.NewClickRecorder(urls, t.TempDir(), 1, 1<<20, 128)
 	if err != nil {
 		t.Fatalf("create click recorder: %v", err)
 	}
@@ -128,12 +128,23 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 			return http.ErrUseLastResponse
 		},
 	}
+	requestJSON(t, client, http.MethodGet, server.URL+"/api/me", nil, http.StatusUnauthorized)
+	requestJSON(t, client, http.MethodPost, server.URL+"/api/login", map[string]interface{}{
+		"email": "missing@example.com", "password": "member-password-42",
+	}, http.StatusUnauthorized)
 	requestJSON(t, client, http.MethodPost, server.URL+"/api/register", map[string]interface{}{
 		"email": "member@example.com", "password": "member-password-42",
 	}, http.StatusCreated)
+	requestJSON(t, client, http.MethodPost, server.URL+"/api/register", map[string]interface{}{
+		"email": "member@example.com", "password": "member-password-42",
+	}, http.StatusConflict)
 	requestJSON(t, client, http.MethodPost, server.URL+"/api/login", map[string]interface{}{
 		"email": "member@example.com", "password": "member-password-42",
 	}, http.StatusOK)
+	requestJSON(t, client, http.MethodGet, server.URL+"/api/me", nil, http.StatusOK)
+	requestJSON(t, client, http.MethodPost, server.URL+"/api/shorten", map[string]interface{}{
+		"original_url": "http://127.0.0.1/private",
+	}, http.StatusBadRequest)
 	requestJSON(t, client, http.MethodPost, server.URL+"/api/shorten", map[string]interface{}{
 		"original_url": "https://example.com/article", "custom_alias": "e2e-link",
 	}, http.StatusCreated)
