@@ -10,6 +10,7 @@ ENV VITE_API_BASE_URL=
 RUN npm run build
 
 FROM nginx:1.30.4-alpine3.24@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46
+RUN apk upgrade --no-cache libcrypto3 libssl3
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
