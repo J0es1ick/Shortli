@@ -29,7 +29,7 @@ func (s *fakeClickStore) RecordClickContext(_ context.Context, event *models.Cli
 func TestClickRecorderRecoversDurableEventAfterRestart(t *testing.T) {
 	spool := t.TempDir()
 	failingStore := &fakeClickStore{fail: true, events: map[string]int{}}
-	first, err := NewClickRecorder(failingStore, spool, 1, 1<<20)
+	first, err := NewClickRecorder(failingStore, spool, 1, 1<<20, 128)
 	if err != nil {
 		t.Fatalf("create first recorder: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestClickRecorderRecoversDurableEventAfterRestart(t *testing.T) {
 	}
 
 	healthyStore := &fakeClickStore{events: map[string]int{}}
-	second, err := NewClickRecorder(healthyStore, spool, 1, 1<<20)
+	second, err := NewClickRecorder(healthyStore, spool, 1, 1<<20, 128)
 	if err != nil {
 		t.Fatalf("create recovered recorder: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestClickRecorderRecoversDurableEventAfterRestart(t *testing.T) {
 
 func TestClickRecorderRejectsEventsBeyondCapacity(t *testing.T) {
 	store := &fakeClickStore{fail: true, events: map[string]int{}}
-	recorder, err := NewClickRecorder(store, t.TempDir(), 1, 1)
+	recorder, err := NewClickRecorder(store, t.TempDir(), 1, 1, 64)
 	if err != nil {
 		t.Fatalf("create recorder: %v", err)
 	}

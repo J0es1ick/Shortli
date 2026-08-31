@@ -52,7 +52,8 @@ func SetupRoutes(
 		stats := clickRecorder.Stats()
 		return middleware.ClickQueueMetrics{
 			Pending: stats.Pending, PendingBytes: stats.PendingBytes,
-			MaxBytes: stats.MaxBytes, Queued: stats.Queued,
+			MaxBytes: stats.MaxBytes, Buffered: stats.Buffered,
+			BufferCapacity: stats.BufferCapacity, Queued: stats.Queued,
 			Recorded: stats.Recorded, Retried: stats.Retried, Dropped: stats.Dropped,
 		}
 	}))

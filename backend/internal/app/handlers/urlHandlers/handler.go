@@ -464,8 +464,11 @@ func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.clickRecorder.Submit(h.clickEventFromRequest(r, url.ID)); err != nil {
-		fmt.Printf("queue click event: %v\n", err)
+	if err := h.clickRecorder.Submit(h.clickEventFromRequest(r, url.ID)); err != nil &&
+		!errors.Is(err, tasks.ErrClickSpoolFull) &&
+		!errors.Is(err, tasks.ErrClickQueueFull) &&
+		!errors.Is(err, tasks.ErrClickRecorderClosed) {
+		log.Printf("queue click event: %v", err)
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	http.Redirect(w, r, url.OriginalURL, http.StatusFound)

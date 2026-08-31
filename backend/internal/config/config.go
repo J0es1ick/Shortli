@@ -25,6 +25,7 @@ type Config struct {
 	AnalyticsSalt          string   `mapstructure:"ANALYTICS_SALT"`
 	ClickSpoolPath         string   `mapstructure:"CLICK_SPOOL_PATH"`
 	ClickSpoolMaxBytes     int64    `mapstructure:"CLICK_SPOOL_MAX_BYTES"`
+	ClickBufferCapacity    int      `mapstructure:"CLICK_BUFFER_CAPACITY"`
 	MetricsToken           string   `mapstructure:"METRICS_TOKEN"`
 	ShutdownTimeout        int      `mapstructure:"SHUTDOWN_TIMEOUT_SECONDS"`
 	AnalyticsRetentionDays int      `mapstructure:"ANALYTICS_RETENTION_DAYS"`
@@ -66,6 +67,7 @@ func InitConfig() (*Config, error) {
 	v.SetDefault("ANALYTICS_SALT", "shortli-local-development")
 	v.SetDefault("CLICK_SPOOL_PATH", ".runtime/click-spool")
 	v.SetDefault("CLICK_SPOOL_MAX_BYTES", 268435456)
+	v.SetDefault("CLICK_BUFFER_CAPACITY", 1024)
 	v.SetDefault("METRICS_TOKEN", "")
 	v.SetDefault("SHUTDOWN_TIMEOUT_SECONDS", 20)
 	v.SetDefault("ANALYTICS_RETENTION_DAYS", 365)
@@ -157,6 +159,9 @@ func (c *Config) validate() error {
 	}
 	if c.ClickSpoolMaxBytes < 1<<20 || c.ClickSpoolMaxBytes > 10<<30 {
 		return fmt.Errorf("CLICK_SPOOL_MAX_BYTES must be between 1 MiB and 10 GiB")
+	}
+	if c.ClickBufferCapacity < 64 || c.ClickBufferCapacity > 65536 {
+		return fmt.Errorf("CLICK_BUFFER_CAPACITY must be between 64 and 65536")
 	}
 
 	if c.AppEnv == "production" {

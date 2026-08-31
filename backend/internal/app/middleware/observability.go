@@ -32,13 +32,15 @@ type MetricsRegistry struct {
 }
 
 type ClickQueueMetrics struct {
-	Pending      int64
-	PendingBytes int64
-	MaxBytes     int64
-	Queued       int64
-	Recorded     int64
-	Retried      int64
-	Dropped      int64
+	Pending        int64
+	PendingBytes   int64
+	MaxBytes       int64
+	Buffered       int64
+	BufferCapacity int64
+	Queued         int64
+	Recorded       int64
+	Retried        int64
+	Dropped        int64
 }
 
 func NewMetricsRegistry(resolver *ClientIPResolver, logSalt string) *MetricsRegistry {
@@ -124,6 +126,10 @@ func (m *MetricsRegistry) Handler(token string, clickStats func() ClickQueueMetr
 		fmt.Fprintf(w, "shortli_click_spool_bytes %d\n", stats.PendingBytes)
 		fmt.Fprintln(w, "# TYPE shortli_click_spool_max_bytes gauge")
 		fmt.Fprintf(w, "shortli_click_spool_max_bytes %d\n", stats.MaxBytes)
+		fmt.Fprintln(w, "# TYPE shortli_click_buffer_depth gauge")
+		fmt.Fprintf(w, "shortli_click_buffer_depth %d\n", stats.Buffered)
+		fmt.Fprintln(w, "# TYPE shortli_click_buffer_capacity gauge")
+		fmt.Fprintf(w, "shortli_click_buffer_capacity %d\n", stats.BufferCapacity)
 		fmt.Fprintln(w, "# TYPE shortli_click_events_queued_total counter")
 		fmt.Fprintf(w, "shortli_click_events_queued_total %d\n", stats.Queued)
 		fmt.Fprintln(w, "# TYPE shortli_click_events_recorded_total counter")
