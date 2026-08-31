@@ -38,6 +38,7 @@ type Database struct {
 	Port             string `mapstructure:"DATABASE_PORT"`
 	User             string `mapstructure:"DATABASE_USER"`
 	Password         string `mapstructure:"DATABASE_PASSWORD"`
+	PasswordFile     string `mapstructure:"DATABASE_PASSWORD_FILE"`
 	Name             string `mapstructure:"DATABASE_NAME"`
 	SSLMode          string `mapstructure:"DATABASE_SSLMODE"`
 	ConnectTimeout   int    `mapstructure:"DATABASE_CONNECT_TIMEOUT_SECONDS"`
@@ -77,6 +78,7 @@ func InitConfig() (*Config, error) {
 	v.SetDefault("DATABASE_HOST", "")
 	v.SetDefault("DATABASE_USER", "")
 	v.SetDefault("DATABASE_PASSWORD", "")
+	v.SetDefault("DATABASE_PASSWORD_FILE", "")
 	v.SetDefault("DATABASE_NAME", "")
 	v.SetDefault("DATABASE_CONNECT_TIMEOUT_SECONDS", 5)
 	v.SetDefault("DATABASE_STATEMENT_TIMEOUT_MS", 5000)
@@ -105,6 +107,14 @@ func InitConfig() (*Config, error) {
 	cfg.PublicBaseURL = strings.TrimRight(strings.TrimSpace(cfg.PublicBaseURL), "/")
 	cfg.FrontendOrigin = strings.TrimRight(strings.TrimSpace(cfg.FrontendOrigin), "/")
 	cfg.Database.SSLMode = strings.TrimSpace(cfg.Database.SSLMode)
+	cfg.Database.PasswordFile = strings.TrimSpace(cfg.Database.PasswordFile)
+	if cfg.Database.Password == "" && cfg.Database.PasswordFile != "" {
+		password, err := os.ReadFile(cfg.Database.PasswordFile)
+		if err != nil {
+			return nil, fmt.Errorf("read DATABASE_PASSWORD_FILE: %w", err)
+		}
+		cfg.Database.Password = strings.TrimSpace(string(password))
+	}
 
 	if err := cfg.validate(); err != nil {
 		return nil, err

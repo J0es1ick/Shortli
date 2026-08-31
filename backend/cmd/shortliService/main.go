@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -23,23 +24,48 @@ func main() {
 		log.Fatalf("Config initialization error: %v", err)
 	}
 
+	mode := "all"
+	if len(os.Args) > 1 {
+		mode = os.Args[1]
+	}
+	switch mode {
+	case "all":
+		migrate(cfg)
+		serve(cfg)
+	case "migrate":
+		migrate(cfg)
+	case "serve":
+		serve(cfg)
+	default:
+		log.Fatalf("Unknown mode %q; expected serve or migrate", mode)
+	}
+}
+
+func migrate(cfg *config.Config) {
+	db, err := database.DBInit(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize migration database connection: %v", err)
+	}
+	defer db.Close()
+
+	migrationCtx, migrationCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer migrationCancel()
+	if err := database.Migrate(migrationCtx, db.DB); err != nil {
+		log.Fatalf("Failed to apply database migrations: %v", err)
+	}
+	log.Println("Database migrations are up to date")
+}
+
+func serve(cfg *config.Config) {
 	fmt.Printf("Server port: %s\n", cfg.ServerPort)
 	fmt.Printf("DB host: %s\n", cfg.Database.Host)
 
 	db, err := database.DBInit(cfg)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		log.Fatalf("Failed to initialize application database connection: %v", err)
 	}
-	fmt.Println("Connection successful")
 	defer db.Close()
-
-	migrationCtx, migrationCancel := context.WithTimeout(context.Background(), 60*time.Second)
-	if err := database.Migrate(migrationCtx, db.DB); err != nil {
-		migrationCancel()
-		log.Fatalf("Failed to apply database migrations: %v", err)
-	}
-	migrationCancel()
-	log.Println("Database migrations are up to date")
+	log.Println("Application database connection established")
 
 	urlRepo := repository.NewUrlRepository(db.DB)
 	userRepo := repository.NewUserRepository(db.DB)

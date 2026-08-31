@@ -1,9 +1,31 @@
 package config
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
+
+func TestInitConfigReadsDatabasePasswordFile(t *testing.T) {
+	passwordPath := t.TempDir() + "/database-password"
+	if err := os.WriteFile(passwordPath, []byte("file-backed-database-password\n"), 0o600); err != nil {
+		t.Fatalf("write password file: %v", err)
+	}
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("DATABASE_HOST", "postgres")
+	t.Setenv("DATABASE_USER", "shortli_app")
+	t.Setenv("DATABASE_PASSWORD", "")
+	t.Setenv("DATABASE_PASSWORD_FILE", passwordPath)
+	t.Setenv("DATABASE_NAME", "shortli")
+
+	cfg, err := InitConfig()
+	if err != nil {
+		t.Fatalf("InitConfig: %v", err)
+	}
+	if cfg.Database.Password != "file-backed-database-password" {
+		t.Fatalf("database password was not loaded from file")
+	}
+}
 
 func TestInitConfigReadsContainerEnvironment(t *testing.T) {
 	t.Setenv("APP_ENV", "production")

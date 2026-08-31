@@ -34,11 +34,60 @@ services:
     mem_limit: 768m
     cpus: 1.5
 
-  backend:
-    build:
-      context: ./backend
-    restart: unless-stopped
-    init: true
+  database-roles:
+    image: postgres:16.14-alpine3.24@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB:-shortli}
+      PGUSER: ${POSTGRES_USER:-shortli}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      APP_DATABASE_USER: ${DATABASE_USER:-shortli_app}
+      APP_DATABASE_PASSWORD: ${DATABASE_PASSWORD:-}
+    command:
+      - sh
+      - -ec
+      - |
+        if [ "$${APP_DATABASE_USER}" = "$${PGUSER}" ]; then
+          echo "Application and migration database roles must be different" >&2
+          exit 1
+        fi
+        app_password="$${APP_DATABASE_PASSWORD}"
+        if [ -z "$${app_password}" ]; then
+          if [ ! -s /credentials/app-password ]; then
+            umask 077
+            head -c 32 /dev/urandom | base64 | tr -d '\n' > /credentials/app-password.tmp
+            chmod 0444 /credentials/app-password.tmp
+            mv /credentials/app-password.tmp /credentials/app-password
+          fi
+          app_password="$$(cat /credentials/app-password)"
+        fi
+        exec psql --set=app_user="$${APP_DATABASE_USER}" --set=app_password="$${app_password}" --file=/roles.sql
+    volumes:
+      - ./ops/database/roles.sql:/roles.sql:ro
+      - shortli-database-credentials:/credentials
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.25
+    tmpfs:
+      - /tmp:size=8m,mode=1777
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shortli-internal
+    logging: *default-logging
+
+  migrate:
+    image: shortli-backend:local
+    restart: "no"
+    command: ["migrate"]
     environment:
       APP_ENV: production
       SERVER_PORT: "43178"
@@ -46,6 +95,45 @@ services:
       DATABASE_PORT: "5432"
       DATABASE_USER: ${POSTGRES_USER:-shortli}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_NAME: ${POSTGRES_DB:-shortli}
+      DATABASE_SSLMODE: disable
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:43176}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:43176}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ANALYTICS_SALT: ${ANALYTICS_SALT:?Set ANALYTICS_SALT in the root .env}
+      METRICS_TOKEN: ${METRICS_TOKEN:?Set METRICS_TOKEN in the root .env}
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.5
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    depends_on:
+      database-roles:
+        condition: service_completed_successfully
+    networks:
+      - shortli-internal
+    logging: *default-logging
+
+  backend:
+    image: shortli-backend:local
+    build:
+      context: ./backend
+    restart: unless-stopped
+    init: true
+    command: ["serve"]
+    environment:
+      APP_ENV: production
+      SERVER_PORT: "43178"
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USER: ${DATABASE_USER:-shortli_app}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-}
+      DATABASE_PASSWORD_FILE: /run/secrets/app-password
       DATABASE_NAME: ${POSTGRES_DB:-shortli}
       DATABASE_SSLMODE: disable
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:43176}
@@ -61,6 +149,7 @@ services:
       METRICS_TOKEN: ${METRICS_TOKEN:?Set METRICS_TOKEN in the root .env}
       CLICK_SPOOL_PATH: /var/lib/shortli/click-spool
       CLICK_SPOOL_MAX_BYTES: ${CLICK_SPOOL_MAX_BYTES:-268435456}
+      CLICK_BUFFER_CAPACITY: ${CLICK_BUFFER_CAPACITY:-1024}
       SHUTDOWN_TIMEOUT_SECONDS: "25"
       ANALYTICS_RETENTION_DAYS: ${ANALYTICS_RETENTION_DAYS:-365}
       REPORT_RETENTION_DAYS: ${REPORT_RETENTION_DAYS:-180}
@@ -68,6 +157,7 @@ services:
       - "43178"
     volumes:
       - shortli-click-spool:/var/lib/shortli/click-spool
+      - shortli-database-credentials:/run/secrets:ro
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -79,8 +169,8 @@ services:
     tmpfs:
       - /tmp:size=32m,mode=1777
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:43178/api/health/ready"]
       interval: 10s
@@ -93,6 +183,7 @@ services:
     stop_grace_period: 35s
 
   web:
+    image: shortli-web:local
     build:
       context: ./frontend
       args:
@@ -132,3 +223,4 @@ networks:
 volumes:
   shortli-postgres-data:
   shortli-click-spool:
+  shortli-database-credentials:
