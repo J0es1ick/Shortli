@@ -2,6 +2,7 @@ package authHandlers
 
 import (
 	"crypto/subtle"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -119,6 +120,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusConflict, "User with this email already exists")
 		return
 	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		response.Error(w, http.StatusServiceUnavailable, "Authentication temporarily unavailable")
+		return
+	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -160,6 +165,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := h.userRepo.FindUserByEmail(r.Context(), email)
 	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			response.Error(w, http.StatusServiceUnavailable, "Authentication temporarily unavailable")
+			return
+		}
 		response.Error(w, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
@@ -208,16 +217,17 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sessionCookie, err := r.Cookie("session_id")
-	if err != nil {
-		response.Error(w, http.StatusBadRequest, "Not authenticated")
-		return
+	if err == nil {
+		if err := h.sessionRepo.DeleteSession(r.Context(), sessionCookie.Value); err != nil {
+			response.Error(w, http.StatusServiceUnavailable, "Failed to end session. Please try again.")
+			return
+		}
 	}
-
-	_ = h.sessionRepo.DeleteSession(r.Context(), sessionCookie.Value)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_id",
 		Value:    "",
+		MaxAge:   -1,
 		Expires:  time.Now().Add(-1 * time.Hour),
 		Path:     "/",
 		HttpOnly: true,

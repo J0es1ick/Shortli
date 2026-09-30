@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -142,6 +143,16 @@ func TestSecurityLifecycleWithPostgres(t *testing.T) {
 		"email": "member@example.com", "password": "member-password-42",
 	}, http.StatusOK)
 	requestJSON(t, client, http.MethodGet, server.URL+"/api/me", nil, http.StatusOK)
+	serverURL, _ := url.Parse(server.URL)
+	previousCookies := jar.Cookies(serverURL)
+	requestJSON(t, client, http.MethodPost, server.URL+"/api/logout", nil, http.StatusOK)
+	requestJSON(t, client, http.MethodGet, server.URL+"/api/me", nil, http.StatusUnauthorized)
+	jar.SetCookies(serverURL, previousCookies)
+	requestJSON(t, client, http.MethodGet, server.URL+"/api/me", nil, http.StatusUnauthorized)
+	requestJSON(t, client, http.MethodPost, server.URL+"/api/logout", nil, http.StatusOK)
+	requestJSON(t, client, http.MethodPost, server.URL+"/api/login", map[string]interface{}{
+		"email": "member@example.com", "password": "member-password-42",
+	}, http.StatusOK)
 	requestJSON(t, client, http.MethodPost, server.URL+"/api/shorten", map[string]interface{}{
 		"original_url": "http://127.0.0.1/private",
 	}, http.StatusBadRequest)

@@ -56,9 +56,9 @@ func (r *SessionRepository) GetSessionByID(ctx context.Context, sessionID string
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("session not found")
+			return nil, fmt.Errorf("session not found: %w", err)
 		}
-		return nil, fmt.Errorf("get session by id error: %v", err)
+		return nil, fmt.Errorf("get session by id error: %w", err)
 	}
 
 	return session, nil

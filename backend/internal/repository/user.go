@@ -99,9 +99,9 @@ func (r *UserRepository) FindUserByEmail(ctx context.Context, email string) (*mo
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			return nil, fmt.Errorf("user not found: %w", err)
 		}
-		return nil, fmt.Errorf("find user by email error: %v", err)
+		return nil, fmt.Errorf("find user by email error: %w", err)
 	}
 
 	user.NormalizeAccess()
@@ -126,9 +126,9 @@ func (r *UserRepository) FindUserByID(ctx context.Context, id int) (*models.User
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			return nil, fmt.Errorf("user not found: %w", err)
 		}
-		return nil, fmt.Errorf("find user by id error: %v", err)
+		return nil, fmt.Errorf("find user by id error: %w", err)
 	}
 
 	user.NormalizeAccess()

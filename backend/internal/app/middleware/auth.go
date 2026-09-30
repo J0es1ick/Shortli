@@ -2,7 +2,10 @@ package middleware
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	response "github.com/J0es1ick/shortli/internal/app/httputils"
@@ -20,6 +23,10 @@ const (
 func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository.SessionRepository, secureCookies bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/logout" || !strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/api/health" || strings.HasPrefix(r.URL.Path, "/api/health/") {
+				next.ServeHTTP(w, r)
+				return
+			}
 			sessionCookie, err := r.Cookie(SessionCookieName)
 			if err != nil {
 				next.ServeHTTP(w, r)
@@ -28,6 +35,10 @@ func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository
 
 			session, err := sessionRepo.GetSessionByID(r.Context(), sessionCookie.Value)
 			if err != nil {
+				if !errors.Is(err, sql.ErrNoRows) {
+					response.Error(w, http.StatusServiceUnavailable, "Authentication temporarily unavailable")
+					return
+				}
 				http.SetCookie(w, &http.Cookie{
 					Name:     SessionCookieName,
 					Value:    "",
@@ -58,6 +69,10 @@ func AuthMiddleware(userRepo *repository.UserRepository, sessionRepo *repository
 
 			user, err := userRepo.FindUserByID(r.Context(), session.UserID)
 			if err != nil {
+				if !errors.Is(err, sql.ErrNoRows) {
+					response.Error(w, http.StatusServiceUnavailable, "Authentication temporarily unavailable")
+					return
+				}
 				next.ServeHTTP(w, r)
 				return
 			}
