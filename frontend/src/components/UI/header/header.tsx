@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { useDialog } from "../../../hooks/useDialog";
 import { Link } from "react-router-dom";
 import { useTheme } from "../../../context/ThemeContext";
 import { useUser } from "../../../context/UserContext";
@@ -9,26 +11,34 @@ import styles from "./header.module.css";
 
 export function Header() {
   const { toggleTheme, theme } = useTheme();
-  const { user, logout, isLoading } = useUser();
-  const { locale, toggleLocale, t } = useLocale();
+  const { user, logout, isLoading, authError, checkAuth } = useUser();
+  const { locale, toggleLocale, t, apiError } = useLocale();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  useEffect(() => {
-    if (!isLogoutOpen) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsLogoutOpen(false);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isLogoutOpen]);
+  const [logoutError, setLogoutError] = useState("");
+  const closeLogout = () => {
+    if (!isLoggingOut) setIsLogoutOpen(false);
+  };
+  const dialogRef = useDialog(isLogoutOpen, closeLogout);
 
   const confirmLogout = async () => {
     setIsLoggingOut(true);
-    await logout();
-    setIsLoggingOut(false);
-    setIsLogoutOpen(false);
+    setLogoutError("");
+    try {
+      await logout();
+      setIsLogoutOpen(false);
+    } catch (error) {
+      setLogoutError(
+        apiError(
+          error instanceof Error ? error.message : undefined,
+          "header.logoutFailed",
+        ),
+      );
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -91,11 +101,23 @@ export function Header() {
 
           {isLoading ? (
             <span className={styles.auth_loading}>{t("header.sync")}</span>
+          ) : authError ? (
+            <button
+              type="button"
+              className={styles.sign_in_button}
+              onClick={() => void checkAuth()}
+              title={t("header.authFailed")}
+            >
+              {t("header.retryAuth")}
+            </button>
           ) : user ? (
             <button
               type="button"
               className={styles.account_button}
-              onClick={() => setIsLogoutOpen(true)}
+              onClick={() => {
+                setLogoutError("");
+                setIsLogoutOpen(true);
+              }}
               title={user.email}
             >
               <span>{user.email.split("@")[0]}</span>
@@ -115,38 +137,47 @@ export function Header() {
 
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
 
-      {isLogoutOpen && (
-        <div
-          className={styles.confirm_overlay}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setIsLogoutOpen(false);
-          }}
-        >
+      {isLogoutOpen &&
+        createPortal(
           <div
-            className={styles.confirm_dialog}
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="logout-title"
-            aria-describedby="logout-description"
+            className={styles.confirm_overlay}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeLogout();
+            }}
           >
-            <span>{t("header.sessionEnd")}</span>
-            <h2 id="logout-title">{t("header.logoutTitle")}</h2>
-            <p id="logout-description">{t("header.logoutDescription")}</p>
-            <div>
-              <button type="button" onClick={() => setIsLogoutOpen(false)}>
-                {t("header.staySignedIn")}
-              </button>
-              <button
-                type="button"
-                onClick={confirmLogout}
-                disabled={isLoggingOut}
-              >
-                {isLoggingOut ? t("header.signingOut") : t("header.logOut")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            <section
+              ref={dialogRef}
+              tabIndex={-1}
+              className={styles.confirm_dialog}
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="logout-title"
+              aria-describedby="logout-description"
+            >
+              <span>{t("header.sessionEnd")}</span>
+              <h2 id="logout-title">{t("header.logoutTitle")}</h2>
+              <p id="logout-description">{t("header.logoutDescription")}</p>
+              {logoutError && <p role="alert">{logoutError}</p>}
+              <div>
+                <button
+                  type="button"
+                  onClick={closeLogout}
+                  disabled={isLoggingOut}
+                >
+                  {t("header.staySignedIn")}
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmLogout}
+                  disabled={isLoggingOut}
+                >
+                  {isLoggingOut ? t("header.signingOut") : t("header.logOut")}
+                </button>
+              </div>
+            </section>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

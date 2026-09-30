@@ -11,7 +11,7 @@ import { useLocale } from "../../context/LocaleContext";
 import styles from "./home.module.css";
 
 export default function Home() {
-  const { user, isLoading } = useUser();
+  const { user, isLoading, authError, checkAuth } = useUser();
   const { t } = useLocale();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const location = useLocation();
@@ -124,6 +124,11 @@ export default function Home() {
           {isLoading ? (
             <div className={styles.history_loading} aria-live="polite">
               {t("home.syncing")}
+            </div>
+          ) : authError ? (
+            <div role="alert">
+              <p>{t("header.authFailed")}</p>
+              <button type="button" onClick={() => void checkAuth()}>{t("common.tryAgain")}</button>
             </div>
           ) : user ? (
             <UserHistory />

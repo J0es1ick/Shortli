@@ -1,3 +1,4 @@
+import { apiFetch } from "../../lib/api";
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import NetworkMesh from "../../components/networkMesh/networkMesh";
@@ -36,7 +37,7 @@ export default function SignUpPage() {
 
     setLoading(true);
     try {
-      const registerResponse = await fetch(apiUrl("/api/register"), {
+      const registerResponse = await apiFetch(apiUrl("/api/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -48,7 +49,7 @@ export default function SignUpPage() {
         throw new Error(apiError(errorData.error, "signup.failed"));
       }
 
-      const loginResponse = await fetch(apiUrl("/api/login"), {
+      const loginResponse = await apiFetch(apiUrl("/api/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

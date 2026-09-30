@@ -1,3 +1,4 @@
+import { apiFetch } from "../../lib/api";
 import { useCallback, useEffect, useState } from "react";
 import Footer from "../../components/UI/footer/footer";
 import { Header } from "../../components/UI/header/header";
@@ -22,10 +23,12 @@ export default function StatusPage() {
   const checkHealth = useCallback(async () => {
     setState((current) => (current === "loading" ? "loading" : current));
     try {
-      const response = await fetch(apiUrl("/api/health"), {
+      const response = await apiFetch(apiUrl("/api/health"), {
         cache: "no-store",
+        credentials: "omit",
       });
       const data = (await response.json()) as HealthResponse;
+      if (!data.services || !["operational", "degraded"].includes(data.status)) throw new Error("Invalid health response");
       setHealth(data);
       setState(
         response.ok && data.status === "operational"

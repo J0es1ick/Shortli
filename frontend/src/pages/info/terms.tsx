@@ -5,7 +5,7 @@ const sections: LegalSection[] = [
   { title: "terms.accounts.title", paragraphs: ["terms.accounts.body"] },
   {
     title: "terms.links.title",
-    paragraphs: ["terms.links.body", "terms.links.immutable"],
+    paragraphs: ["terms.links.body", "terms.links.immutable", "shortener.guestNote"],
   },
   {
     title: "terms.prohibited.title",

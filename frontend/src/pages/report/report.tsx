@@ -1,3 +1,4 @@
+import { apiFetch } from "../../lib/api";
 import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import Footer from "../../components/UI/footer/footer";
@@ -36,7 +37,7 @@ export default function ReportPage() {
     setSubmitting(true);
     setError("");
     try {
-      const response = await fetch(apiUrl("/api/abuse-reports"), {
+      const response = await apiFetch(apiUrl("/api/abuse-reports"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

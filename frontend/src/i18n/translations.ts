@@ -38,6 +38,10 @@ const en = {
     "Your links will stay saved. You can sign back in at any time.",
   "header.staySignedIn": "Stay signed in",
   "header.signingOut": "Signing out…",
+  "header.logoutFailed":
+    "Sign-out was not confirmed. Your session may still be active. Please try again.",
+  "header.authFailed": "Could not check your session. Please retry.",
+  "header.retryAuth": "Retry session check",
 
   "home.utility": "LINK OPERATIONS PLATFORM",
   "home.heroLine1": "Make every link",
@@ -46,7 +50,7 @@ const en = {
     "A focused platform to create, manage, analyze and safely share short links and QR codes.",
   "home.registerFree": "Create a free account",
   "home.platformLabel": "PLATFORM / LIVE WORKSPACE",
-  "home.platformOnline": "ONLINE",
+  "home.platformOnline": "LINK WORKSPACE",
   "home.platformInput": "LONG URL",
   "home.platform.links": "Smart links",
   "home.platform.qr": "QR studio",
@@ -109,6 +113,8 @@ const en = {
   "shortener.aliasInvalid":
     "Use 3–32 Latin letters, numbers, hyphens or underscores.",
   "shortener.lifetimeLabel": "Link lifetime",
+  "shortener.guestNote":
+    "Guest links work until the selected expiration, or indefinitely by default, unless removed by moderation. They cannot be managed or added to an account later. An existing guest link to the same URL may be reused with its original lifetime. Sign in before creating a link if you need control.",
   "shortener.lifetime.never": "No expiration",
   "shortener.lifetime.day": "24 hours",
   "shortener.lifetime.week": "7 days",
@@ -283,12 +289,15 @@ const en = {
   "developers.pageTitle": "Developers",
   "developers.label": "PUBLIC API / V1",
   "developers.title": "Build on top of Shortli.",
-  "developers.intro": "Create immutable short links, manage their lifetime and read owner-only analytics from your own tools and applications.",
+  "developers.intro":
+    "Create immutable short links, manage their lifetime and read owner-only analytics from your own tools and applications.",
   "developers.quickStart": "One request to your first link.",
-  "developers.quickStartDescription": "Send JSON and your API key in the X-API-Key header. The generated secret is shown only once.",
+  "developers.quickStartDescription":
+    "Send JSON and your API key in the X-API-Key header. The generated secret is shown only once.",
   "developers.baseUrl": "Base URL",
   "developers.endpoints": "Versioned endpoints.",
-  "developers.endpointsDescription": "V1 keeps link destinations immutable. Management is limited to status, lifetime, analytics and deletion.",
+  "developers.endpointsDescription":
+    "V1 keeps link destinations immutable. Management is limited to status, lifetime, analytics and deletion.",
   "developers.endpoint.create": "Create a link",
   "developers.endpoint.read": "Read one of your links",
   "developers.endpoint.update": "Pause, resume or change expiration",
@@ -296,8 +305,10 @@ const en = {
   "developers.endpoint.analytics": "Read click analytics",
   "developers.openApi": "Open OpenAPI schema",
   "developers.keys": "Your API keys.",
-  "developers.keysDescription": "Create separate keys for integrations and revoke any key without ending your browser session.",
-  "developers.signInRequired": "Sign in to create and manage API keys. The documentation remains public.",
+  "developers.keysDescription":
+    "Create separate keys for integrations and revoke any key without ending your browser session.",
+  "developers.signInRequired":
+    "Sign in to create and manage API keys. The documentation remains public.",
   "developers.keyName": "Key name",
   "developers.keyPlaceholder": "Production integration",
   "developers.createKey": "Create key",
@@ -311,55 +322,80 @@ const en = {
   "developers.keysLoadError": "API keys could not be loaded.",
   "developers.keyCreateError": "API key could not be created.",
   "developers.keyRevokeError": "API key could not be revoked.",
-  "developers.securityNote": "Keys are stored as one-way hashes. Treat the displayed secret like a password, keep it out of source code and revoke it immediately if exposed.",
+  "developers.securityNote":
+    "Keys are stored as one-way hashes. Treat the displayed secret like a password, keep it out of source code and revoke it immediately if exposed.",
 
   "legal.updated": "Last updated: July 23, 2026",
   "legal.navigation": "On this page",
-  "legal.launchNote": "Before a public launch, the service operator should add its legal name, jurisdiction and a dedicated support email to this document.",
+  "legal.launchNote":
+    "Before a public launch, the service operator should add its legal name, jurisdiction and a dedicated support email to this document.",
   "privacy.pageTitle": "Privacy policy",
   "privacy.label": "LEGAL / PRIVACY",
   "privacy.title": "Privacy, without vague language.",
-  "privacy.intro": "This policy explains what Shortli processes when you create an account, shorten a link or follow one, and how that information is protected.",
+  "privacy.intro":
+    "This policy explains what Shortli processes when you create an account, shorten a link or follow one, and how that information is protected.",
   "privacy.data.title": "Information we process",
-  "privacy.data.account": "When you register, Shortli stores your email address, a one-way password hash, account role and creation date. API secrets are also stored only as one-way hashes; the original password and API key are never retained.",
-  "privacy.data.links": "For each shortened link, we store the destination URL, short code, owner, creation time, lifetime, current status and total click count.",
-  "privacy.data.analytics": "A click event may include its time, device category, browser, operating system, referrer hostname and a country code supplied by the hosting proxy. Shortli stores an HMAC hash of the visitor IP for approximate unique counts, not the raw IP address.",
+  "privacy.data.account":
+    "When you register, Shortli stores your email address, a one-way password hash, account role and creation date. API secrets are also stored only as one-way hashes; the original password and API key are never retained.",
+  "privacy.data.links":
+    "For each shortened link, we store the destination URL, short code, owner, creation time, lifetime, current status and total click count.",
+  "privacy.data.analytics":
+    "A click event may include its time, device category, browser, operating system, referrer hostname and a country code supplied by the hosting proxy. Shortli stores an HMAC hash of the visitor IP for approximate unique counts, not the raw IP address.",
   "privacy.purpose.title": "Why we use it",
-  "privacy.purpose.service": "The data is used to operate redirects, keep your archive, generate QR codes, show owner-only analytics and apply link lifetime settings.",
-  "privacy.purpose.security": "Technical information is also used to limit abuse, investigate failures and protect accounts and the service from automated attacks.",
+  "privacy.purpose.service":
+    "The data is used to operate redirects, keep your archive, generate QR codes, show owner-only analytics and apply link lifetime settings.",
+  "privacy.purpose.security":
+    "Technical information is also used to limit abuse, investigate failures and protect accounts and the service from automated attacks.",
   "privacy.cookies.title": "Sessions and cookies",
-  "privacy.cookies.body": "Shortli uses an HTTP-only session cookie to keep you signed in. It is restricted with SameSite protection and is configured as Secure in production. Theme and language preferences may be stored locally in your browser.",
+  "privacy.cookies.body":
+    "Shortli uses an HTTP-only session cookie to keep you signed in. It is restricted with SameSite protection and is configured as Secure in production. Theme and language preferences may be stored locally in your browser.",
   "privacy.storage.title": "Storage and deletion",
-  "privacy.storage.body": "Account and link data remains stored while the relevant account or link exists. Detailed click events are retained for the configured analytics period, up to 365 days by default, and are removed earlier when their link is deleted. Sessions expire seven days after sign-in and are not extended by page visits.",
-  "privacy.storage.delete": "You can delete individual links or your account through the service. Deleting an account also deletes all links owned by it. Shortli request logs contain a pseudonymous client ID instead of a raw IP address and rotate after five 10 MB files per service. Database backups or hosting-provider logs may require a limited additional period to rotate.",
+  "privacy.storage.body":
+    "Account and link data remains stored while the relevant account or link exists. Detailed click events are retained for the configured analytics period, up to 365 days by default, and are removed earlier when their link is deleted. Sessions expire seven days after sign-in and are not extended by page visits.",
+  "privacy.storage.delete":
+    "You can delete individual links or your account through the service. Deleting an account also deletes all links owned by it. Shortli request logs contain a pseudonymous client ID instead of a raw IP address and rotate after five 10 MB files per service. Database backups or hosting-provider logs may require a limited additional period to rotate.",
   "privacy.sharing.title": "Third parties",
-  "privacy.sharing.body": "Shortli does not sell personal data. Hosting, database, DNS, anti-abuse or email providers may process only the information required to deliver their part of the service under their own security obligations.",
+  "privacy.sharing.body":
+    "Shortli does not sell personal data. Hosting, database, DNS, anti-abuse or email providers may process only the information required to deliver their part of the service under their own security obligations.",
   "privacy.rights.title": "Your choices",
-  "privacy.rights.body": "You may review your saved links, change their status or lifetime, delete them, update your account information or request account deletion. You may also ask what account information is held about you.",
+  "privacy.rights.body":
+    "You may review your saved links, change their status or lifetime, delete them, update your account information or request account deletion. You may also ask what account information is held about you.",
   "privacy.contact.title": "Contact and operator details",
-  "privacy.contact.body": "Privacy questions can currently be sent through the contact link in the footer. Do not include passwords, session values or other secrets in a message.",
+  "privacy.contact.body":
+    "Privacy questions can currently be sent through the contact link in the footer. Do not include passwords, session values or other secrets in a message.",
   "terms.pageTitle": "Terms of use",
   "terms.label": "LEGAL / TERMS",
   "terms.title": "Clear rules for short links.",
-  "terms.intro": "These terms set the basic rules for using Shortli and help keep short links predictable and safe for their creators and recipients.",
+  "terms.intro":
+    "These terms set the basic rules for using Shortli and help keep short links predictable and safe for their creators and recipients.",
   "terms.acceptance.title": "Acceptance",
-  "terms.acceptance.body": "By using Shortli, you agree to these terms and the privacy policy. If you do not agree, do not create or distribute links through the service.",
+  "terms.acceptance.body":
+    "By using Shortli, you agree to these terms and the privacy policy. If you do not agree, do not create or distribute links through the service.",
   "terms.accounts.title": "Accounts",
-  "terms.accounts.body": "You are responsible for accurate account information, a strong password and activity performed through your session. Notify the operator if you believe your account has been compromised.",
+  "terms.accounts.body":
+    "You are responsible for accurate account information, a strong password and activity performed through your session. Notify the operator if you believe your account has been compromised.",
   "terms.links.title": "How links work",
-  "terms.links.body": "You are responsible for the destination and context of every link you create. A link may be paused automatically when it expires, manually by its owner, or by an administrator responding to abuse.",
-  "terms.links.immutable": "The destination cannot be edited after creation. To point elsewhere, delete or pause the old link and create a new one; this prevents a trusted published link from being silently repurposed.",
+  "terms.links.body":
+    "You are responsible for the destination and context of every link you create. A link may be paused automatically when it expires, manually by its owner, or by an administrator responding to abuse.",
+  "terms.links.immutable":
+    "The destination cannot be edited after creation. To point elsewhere, delete or pause the old link and create a new one; this prevents a trusted published link from being silently repurposed.",
   "terms.prohibited.title": "Prohibited use",
-  "terms.prohibited.body": "Do not use Shortli for phishing, malware, credential theft, unwanted bulk messaging, illegal material, impersonation, privacy violations, access-control evasion or any activity that harms people, systems or networks.",
-  "terms.prohibited.action": "Shortli may pause or remove links and restrict accounts when there is a reasonable indication of abuse, a security risk or a legal requirement.",
+  "terms.prohibited.body":
+    "Do not use Shortli for phishing, malware, credential theft, unwanted bulk messaging, illegal material, impersonation, privacy violations, access-control evasion or any activity that harms people, systems or networks.",
+  "terms.prohibited.action":
+    "Shortli may pause or remove links and restrict accounts when there is a reasonable indication of abuse, a security risk or a legal requirement.",
   "terms.availability.title": "Availability",
-  "terms.availability.body": "The service is provided on a best-effort basis without a guaranteed uptime or retention period. Maintenance, hosting failures, security incidents or legal requirements may temporarily interrupt access.",
+  "terms.availability.body":
+    "The service is provided on a best-effort basis without a guaranteed uptime or retention period. Maintenance, hosting failures, security incidents or legal requirements may temporarily interrupt access.",
   "terms.liability.title": "Responsibility",
-  "terms.liability.body": "Shortli does not endorse third-party destinations and is not responsible for their content. To the extent permitted by applicable law, the operator is not liable for indirect losses caused by unavailable or misused short links.",
+  "terms.liability.body":
+    "Shortli does not endorse third-party destinations and is not responsible for their content. To the extent permitted by applicable law, the operator is not liable for indirect losses caused by unavailable or misused short links.",
   "terms.changes.title": "Changes",
-  "terms.changes.body": "These terms may be updated when the service or legal requirements change. The revision date at the top identifies the currently published version.",
+  "terms.changes.body":
+    "These terms may be updated when the service or legal requirements change. The revision date at the top identifies the currently published version.",
   "terms.contact.title": "Contact",
-  "terms.contact.body": "Questions and abuse notices can currently be sent through the contact link in the footer. Include the short code and a concise description, but never send passwords or session values.",
+  "terms.contact.body":
+    "Questions and abuse notices can currently be sent through the contact link in the footer. Include the short code and a concise description, but never send passwords or session values.",
   "status.pageTitle": "Service status",
   "status.label": "SYSTEM / LIVE",
   "status.title": "Current service status.",
@@ -369,11 +405,14 @@ const en = {
   "status.degraded": "Partial disruption",
   "status.offline": "API unavailable",
   "status.interface": "Web interface",
-  "status.interfaceDescription": "The page and its static interface are available in your browser.",
+  "status.interfaceDescription":
+    "The page and its static interface are available in your browser.",
   "status.api": "Redirect and API",
-  "status.apiDescription": "Creates and manages links, records analytics and resolves short codes.",
+  "status.apiDescription":
+    "Creates and manages links, records analytics and resolves short codes.",
   "status.database": "Database",
-  "status.databaseDescription": "Stores accounts, links, sessions and privacy-preserving click events.",
+  "status.databaseDescription":
+    "Stores accounts, links, sessions and privacy-preserving click events.",
   "status.value.operational": "Operational",
   "status.value.degraded": "Degraded",
   "status.value.offline": "Offline",
@@ -381,11 +420,13 @@ const en = {
   "status.value.unknown": "Unknown",
   "status.liveCheck": "LIVE HEALTH CHECK",
   "status.refreshTitle": "Measured now, not hard-coded.",
-  "status.refreshDescription": "This page requests the API and asks it to verify the database connection. The result refreshes automatically every 30 seconds.",
+  "status.refreshDescription":
+    "This page requests the API and asks it to verify the database connection. The result refreshes automatically every 30 seconds.",
   "status.lastChecked": "Last checked",
   "status.apiVersion": "API version",
   "status.checkNow": "Check again",
-  "status.note": "Current status is an availability snapshot, not a service-level agreement or historical incident record.",
+  "status.note":
+    "Current status is an availability snapshot, not a service-level agreement or historical incident record.",
 
   "footer.tagline": "Less link. More signal.",
   "footer.built": "BUILT FOR FAST SHARING",
@@ -401,16 +442,20 @@ const en = {
   "report.pageTitle": "Report abuse",
   "report.label": "TRUST / REPORT",
   "report.title": "Flag a harmful link.",
-  "report.intro": "Tell us when a Shortli link is used for phishing, malware, impersonation or other harmful content. Reports enter the administrator moderation queue.",
+  "report.intro":
+    "Tell us when a Shortli link is used for phishing, malware, impersonation or other harmful content. Reports enter the administrator moderation queue.",
   "report.processLabel": "What happens next",
   "report.processTitle": "A human reviews every signal.",
-  "report.processDescription": "The administrator can pause the reported link immediately and block its destination domain from future links.",
-  "report.privacyNote": "Your email is optional. The service stores only a privacy-preserving hash of the network address to prevent duplicate reports.",
+  "report.processDescription":
+    "The administrator can pause the reported link immediately and block its destination domain from future links.",
+  "report.privacyNote":
+    "Your email is optional. The service stores only a privacy-preserving hash of the network address to prevent duplicate reports.",
   "report.linkLabel": "Short link or code",
   "report.reasonLabel": "Reason",
   "report.emailLabel": "Email (optional)",
   "report.detailsLabel": "What happened",
-  "report.detailsPlaceholder": "Describe the page, message or behavior that made this link suspicious.",
+  "report.detailsPlaceholder":
+    "Describe the page, message or behavior that made this link suspicious.",
   "report.reason.phishing": "Phishing",
   "report.reason.malware": "Malware",
   "report.reason.spam": "Spam",
@@ -421,7 +466,8 @@ const en = {
   "report.submitting": "Sending…",
   "report.error": "The report could not be submitted.",
   "report.successTitle": "Report received.",
-  "report.successDescription": "It is now visible to administrators. If the link is dangerous, it can be paused without changing its destination.",
+  "report.successDescription":
+    "It is now visible to administrators. If the link is dangerous, it can be paused without changing its destination.",
   "report.another": "Report another link",
 
   "admin.loading": "Loading…",
@@ -468,7 +514,8 @@ const en = {
   "admin.unblock": "Unblock",
   "admin.dashboardLabel": "CONTROL CENTER / STAFF",
   "admin.dashboardTitle": "Operate the whole link platform.",
-  "admin.dashboardDescription": "Review activity, moderate reports and keep access to Shortli explicit and accountable.",
+  "admin.dashboardDescription":
+    "Review activity, moderate reports and keep access to Shortli explicit and accountable.",
   "admin.yourAccess": "YOUR ACCESS",
   "admin.sections": "Administration sections",
   "admin.section.team": "Team and roles",
@@ -476,7 +523,8 @@ const en = {
   "admin.section.links": "Link index",
   "admin.teamLabel": "ACCESS / TEAM",
   "admin.teamTitle": "People and permissions.",
-  "admin.teamDescription": "{count} registered accounts. Every privileged action begins with an explicit role.",
+  "admin.teamDescription":
+    "{count} registered accounts. Every privileged action begins with an explicit role.",
   "admin.userSearch": "Find on this page",
   "admin.userSearchPlaceholder": "Email address",
   "admin.usersLoading": "Loading registered users…",
@@ -491,15 +539,20 @@ const en = {
   "admin.userPages": "User directory pages",
   "admin.previous": "Previous",
   "admin.next": "Next",
-  "admin.roleNote": "Owners control every role. Administrators can assign administrators, support and users. Support handles links and moderation without team access.",
+  "admin.roleNote":
+    "Owners control every role. Administrators can assign administrators, support and users. Support handles links and moderation without team access.",
   "admin.role.owner": "Owner",
   "admin.role.admin": "Administrator",
   "admin.role.support": "Support",
   "admin.role.user": "User",
-  "admin.roleDescription.owner": "Full platform control, including owners and roles.",
-  "admin.roleDescription.admin": "Operations, moderation and team access without owner control.",
-  "admin.roleDescription.support": "Link index and moderation queue without role management.",
-  "admin.roleDescription.user": "Personal links only; no administration access.",
+  "admin.roleDescription.owner":
+    "Full platform control, including owners and roles.",
+  "admin.roleDescription.admin":
+    "Operations, moderation and team access without owner control.",
+  "admin.roleDescription.support":
+    "Link index and moderation queue without role management.",
+  "admin.roleDescription.user":
+    "Personal links only; no administration access.",
 
   "pagination.previous": "Previous",
   "pagination.next": "Next",
@@ -548,6 +601,10 @@ const ru: Record<TranslationKey, string> = {
     "Ваши ссылки останутся сохранены. Вы сможете войти снова в любое время.",
   "header.staySignedIn": "Остаться",
   "header.signingOut": "Выходим…",
+  "header.logoutFailed":
+    "Выход не подтверждён. Сессия может оставаться активной. Попробуйте ещё раз.",
+  "header.authFailed": "Не удалось проверить сессию. Повторите попытку.",
+  "header.retryAuth": "Проверить сессию",
 
   "home.utility": "ПЛАТФОРМА ДЛЯ РАБОТЫ СО ССЫЛКАМИ",
   "home.heroLine1": "Сделайте каждую",
@@ -556,7 +613,7 @@ const ru: Record<TranslationKey, string> = {
     "Лаконичная платформа для создания, управления, аналитики и безопасной публикации коротких ссылок и QR-кодов.",
   "home.registerFree": "Создать бесплатный аккаунт",
   "home.platformLabel": "ПЛАТФОРМА / РАБОЧЕЕ ПРОСТРАНСТВО",
-  "home.platformOnline": "В СЕТИ",
+  "home.platformOnline": "РАБОТА СО ССЫЛКАМИ",
   "home.platformInput": "ДЛИННЫЙ URL",
   "home.platform.links": "Умные ссылки",
   "home.platform.qr": "QR-студия",
@@ -619,6 +676,8 @@ const ru: Record<TranslationKey, string> = {
   "shortener.aliasInvalid":
     "Используйте от 3 до 32 латинских букв, цифр, дефисов или подчёркиваний.",
   "shortener.lifetimeLabel": "Срок действия ссылки",
+  "shortener.guestNote":
+    "Гостевая ссылка действует до выбранной даты, а по умолчанию — без срока, если её не удалит модерация. Управлять ею и перенести её в аккаунт позже нельзя. Для того же адреса может вернуться уже созданная гостевая ссылка с прежним сроком. Для управления войдите в аккаунт до создания ссылки.",
   "shortener.lifetime.never": "Без срока",
   "shortener.lifetime.day": "24 часа",
   "shortener.lifetime.week": "7 дней",
@@ -791,12 +850,15 @@ const ru: Record<TranslationKey, string> = {
   "developers.pageTitle": "Разработчикам",
   "developers.label": "ПУБЛИЧНЫЙ API / V1",
   "developers.title": "Создавайте свои решения на Shortli.",
-  "developers.intro": "Создавайте неизменяемые короткие ссылки, управляйте сроком действия и получайте закрытую аналитику из собственных инструментов и приложений.",
+  "developers.intro":
+    "Создавайте неизменяемые короткие ссылки, управляйте сроком действия и получайте закрытую аналитику из собственных инструментов и приложений.",
   "developers.quickStart": "Первая ссылка одним запросом.",
-  "developers.quickStartDescription": "Передайте JSON и ключ в заголовке X-API-Key. Сгенерированный секрет показывается только один раз.",
+  "developers.quickStartDescription":
+    "Передайте JSON и ключ в заголовке X-API-Key. Сгенерированный секрет показывается только один раз.",
   "developers.baseUrl": "Базовый URL",
   "developers.endpoints": "Версионированные методы.",
-  "developers.endpointsDescription": "В V1 адрес назначения остаётся неизменяемым. Управлять можно статусом, сроком, аналитикой и удалением.",
+  "developers.endpointsDescription":
+    "В V1 адрес назначения остаётся неизменяемым. Управлять можно статусом, сроком, аналитикой и удалением.",
   "developers.endpoint.create": "Создать ссылку",
   "developers.endpoint.read": "Получить свою ссылку",
   "developers.endpoint.update": "Пауза, возобновление или новый срок",
@@ -804,8 +866,10 @@ const ru: Record<TranslationKey, string> = {
   "developers.endpoint.analytics": "Получить аналитику переходов",
   "developers.openApi": "Открыть схему OpenAPI",
   "developers.keys": "Ваши API-ключи.",
-  "developers.keysDescription": "Создавайте отдельные ключи для интеграций и отзывайте их, не завершая браузерную сессию.",
-  "developers.signInRequired": "Войдите, чтобы создавать и управлять API-ключами. Документация остаётся публичной.",
+  "developers.keysDescription":
+    "Создавайте отдельные ключи для интеграций и отзывайте их, не завершая браузерную сессию.",
+  "developers.signInRequired":
+    "Войдите, чтобы создавать и управлять API-ключами. Документация остаётся публичной.",
   "developers.keyName": "Название ключа",
   "developers.keyPlaceholder": "Рабочая интеграция",
   "developers.createKey": "Создать ключ",
@@ -819,55 +883,80 @@ const ru: Record<TranslationKey, string> = {
   "developers.keysLoadError": "Не удалось загрузить API-ключи.",
   "developers.keyCreateError": "Не удалось создать API-ключ.",
   "developers.keyRevokeError": "Не удалось отозвать API-ключ.",
-  "developers.securityNote": "Ключи хранятся в виде необратимых хешей. Обращайтесь с показанным секретом как с паролем, не добавляйте его в исходный код и немедленно отзовите при утечке.",
+  "developers.securityNote":
+    "Ключи хранятся в виде необратимых хешей. Обращайтесь с показанным секретом как с паролем, не добавляйте его в исходный код и немедленно отзовите при утечке.",
 
   "legal.updated": "Обновлено: 23 июля 2026 года",
   "legal.navigation": "На этой странице",
-  "legal.launchNote": "Перед публичным запуском оператору сервиса необходимо добавить в этот документ юридическое наименование, применимую юрисдикцию и отдельную почту поддержки.",
+  "legal.launchNote":
+    "Перед публичным запуском оператору сервиса необходимо добавить в этот документ юридическое наименование, применимую юрисдикцию и отдельную почту поддержки.",
   "privacy.pageTitle": "Политика конфиденциальности",
   "privacy.label": "ДОКУМЕНТЫ / КОНФИДЕНЦИАЛЬНОСТЬ",
   "privacy.title": "О данных — без расплывчатых формулировок.",
-  "privacy.intro": "Эта политика объясняет, какие данные Shortli обрабатывает при регистрации, создании и открытии коротких ссылок и как они защищаются.",
+  "privacy.intro":
+    "Эта политика объясняет, какие данные Shortli обрабатывает при регистрации, создании и открытии коротких ссылок и как они защищаются.",
   "privacy.data.title": "Какие данные обрабатываются",
-  "privacy.data.account": "При регистрации Shortli сохраняет адрес электронной почты, необратимый хеш пароля, роль аккаунта и дату создания. Секреты API также хранятся только как необратимые хеши; исходные пароль и API-ключ не сохраняются.",
-  "privacy.data.links": "Для каждой короткой ссылки сохраняются адрес назначения, короткий код, владелец, время создания, срок действия, текущий статус и общее количество переходов.",
-  "privacy.data.analytics": "Событие перехода может содержать время, тип устройства, браузер, операционную систему, домен источника и код страны, переданный хостингом или прокси. Для примерного подсчёта уникальных посетителей Shortli хранит HMAC-хеш IP, а не исходный IP-адрес.",
+  "privacy.data.account":
+    "При регистрации Shortli сохраняет адрес электронной почты, необратимый хеш пароля, роль аккаунта и дату создания. Секреты API также хранятся только как необратимые хеши; исходные пароль и API-ключ не сохраняются.",
+  "privacy.data.links":
+    "Для каждой короткой ссылки сохраняются адрес назначения, короткий код, владелец, время создания, срок действия, текущий статус и общее количество переходов.",
+  "privacy.data.analytics":
+    "Событие перехода может содержать время, тип устройства, браузер, операционную систему, домен источника и код страны, переданный хостингом или прокси. Для примерного подсчёта уникальных посетителей Shortli хранит HMAC-хеш IP, а не исходный IP-адрес.",
   "privacy.purpose.title": "Для чего это используется",
-  "privacy.purpose.service": "Данные нужны для работы редиректов, архива ссылок, генерации QR-кодов, аналитики владельца и управления сроком действия.",
-  "privacy.purpose.security": "Техническая информация также используется для ограничения злоупотреблений, диагностики сбоев и защиты аккаунтов и сервиса от автоматизированных атак.",
+  "privacy.purpose.service":
+    "Данные нужны для работы редиректов, архива ссылок, генерации QR-кодов, аналитики владельца и управления сроком действия.",
+  "privacy.purpose.security":
+    "Техническая информация также используется для ограничения злоупотреблений, диагностики сбоев и защиты аккаунтов и сервиса от автоматизированных атак.",
   "privacy.cookies.title": "Сессии и cookies",
-  "privacy.cookies.body": "Shortli использует недоступный JavaScript сессионный cookie для сохранения входа. Он защищён режимом SameSite, а в рабочей среде передаётся только по HTTPS. Настройки темы и языка могут храниться локально в браузере.",
+  "privacy.cookies.body":
+    "Shortli использует недоступный JavaScript сессионный cookie для сохранения входа. Он защищён режимом SameSite, а в рабочей среде передаётся только по HTTPS. Настройки темы и языка могут храниться локально в браузере.",
   "privacy.storage.title": "Хранение и удаление",
-  "privacy.storage.body": "Данные аккаунта и ссылок хранятся, пока существует соответствующий аккаунт или ссылка. Подробные события переходов хранятся в течение настроенного периода аналитики — по умолчанию до 365 дней — и удаляются раньше вместе со ссылкой. Сессия завершается через семь дней после входа и не продлевается при просмотре страниц.",
-  "privacy.storage.delete": "Можно удалить отдельные ссылки или аккаунт через сервис. При удалении аккаунта удаляются и все принадлежащие ему ссылки. В журналах запросов Shortli вместо исходного IP записывается псевдоним клиента; журналы каждого сервиса ротируются после пяти файлов по 10 МБ. Резервным копиям и журналам хостинг-провайдера может потребоваться дополнительное ограниченное время для ротации.",
+  "privacy.storage.body":
+    "Данные аккаунта и ссылок хранятся, пока существует соответствующий аккаунт или ссылка. Подробные события переходов хранятся в течение настроенного периода аналитики — по умолчанию до 365 дней — и удаляются раньше вместе со ссылкой. Сессия завершается через семь дней после входа и не продлевается при просмотре страниц.",
+  "privacy.storage.delete":
+    "Можно удалить отдельные ссылки или аккаунт через сервис. При удалении аккаунта удаляются и все принадлежащие ему ссылки. В журналах запросов Shortli вместо исходного IP записывается псевдоним клиента; журналы каждого сервиса ротируются после пяти файлов по 10 МБ. Резервным копиям и журналам хостинг-провайдера может потребоваться дополнительное ограниченное время для ротации.",
   "privacy.sharing.title": "Передача третьим лицам",
-  "privacy.sharing.body": "Shortli не продаёт персональные данные. Провайдеры хостинга, базы данных, DNS, защиты от злоупотреблений или почты могут обрабатывать только сведения, необходимые для своей части сервиса, в рамках собственных обязательств по безопасности.",
+  "privacy.sharing.body":
+    "Shortli не продаёт персональные данные. Провайдеры хостинга, базы данных, DNS, защиты от злоупотреблений или почты могут обрабатывать только сведения, необходимые для своей части сервиса, в рамках собственных обязательств по безопасности.",
   "privacy.rights.title": "Ваши возможности",
-  "privacy.rights.body": "Можно просматривать сохранённые ссылки, менять их статус и срок, удалять их, обновлять данные аккаунта или запросить его удаление. Также можно запросить сведения о данных аккаунта, которыми располагает сервис.",
+  "privacy.rights.body":
+    "Можно просматривать сохранённые ссылки, менять их статус и срок, удалять их, обновлять данные аккаунта или запросить его удаление. Также можно запросить сведения о данных аккаунта, которыми располагает сервис.",
   "privacy.contact.title": "Контакты и сведения об операторе",
-  "privacy.contact.body": "Вопросы о конфиденциальности сейчас можно отправить через ссылку для связи в подвале сайта. Не указывайте в сообщении пароли, значения сессий и другие секреты.",
+  "privacy.contact.body":
+    "Вопросы о конфиденциальности сейчас можно отправить через ссылку для связи в подвале сайта. Не указывайте в сообщении пароли, значения сессий и другие секреты.",
   "terms.pageTitle": "Условия использования",
   "terms.label": "ДОКУМЕНТЫ / УСЛОВИЯ",
   "terms.title": "Понятные правила для коротких ссылок.",
-  "terms.intro": "Эти условия устанавливают основные правила использования Shortli и помогают сохранять короткие ссылки предсказуемыми и безопасными для авторов и получателей.",
+  "terms.intro":
+    "Эти условия устанавливают основные правила использования Shortli и помогают сохранять короткие ссылки предсказуемыми и безопасными для авторов и получателей.",
   "terms.acceptance.title": "Принятие условий",
-  "terms.acceptance.body": "Используя Shortli, вы соглашаетесь с этими условиями и политикой конфиденциальности. Если вы не согласны, не создавайте и не распространяйте ссылки через сервис.",
+  "terms.acceptance.body":
+    "Используя Shortli, вы соглашаетесь с этими условиями и политикой конфиденциальности. Если вы не согласны, не создавайте и не распространяйте ссылки через сервис.",
   "terms.accounts.title": "Аккаунты",
-  "terms.accounts.body": "Вы отвечаете за достоверность данных аккаунта, надёжность пароля и действия, выполненные через вашу сессию. Сообщите оператору, если считаете, что аккаунт был скомпрометирован.",
+  "terms.accounts.body":
+    "Вы отвечаете за достоверность данных аккаунта, надёжность пароля и действия, выполненные через вашу сессию. Сообщите оператору, если считаете, что аккаунт был скомпрометирован.",
   "terms.links.title": "Как работают ссылки",
-  "terms.links.body": "Вы отвечаете за адрес назначения и контекст каждой созданной ссылки. Ссылка может быть приостановлена по окончании срока, вручную владельцем или администратором при рассмотрении злоупотребления.",
-  "terms.links.immutable": "Адрес назначения нельзя изменить после создания. Чтобы вести на другой ресурс, удалите или приостановите старую ссылку и создайте новую — так уже опубликованную доверенную ссылку невозможно незаметно переназначить.",
+  "terms.links.body":
+    "Вы отвечаете за адрес назначения и контекст каждой созданной ссылки. Ссылка может быть приостановлена по окончании срока, вручную владельцем или администратором при рассмотрении злоупотребления.",
+  "terms.links.immutable":
+    "Адрес назначения нельзя изменить после создания. Чтобы вести на другой ресурс, удалите или приостановите старую ссылку и создайте новую — так уже опубликованную доверенную ссылку невозможно незаметно переназначить.",
   "terms.prohibited.title": "Запрещённое использование",
-  "terms.prohibited.body": "Запрещено использовать Shortli для фишинга, вредоносных программ, кражи учётных данных, нежелательных массовых рассылок, незаконных материалов, выдачи себя за другое лицо, нарушения приватности, обхода контроля доступа и действий, вредящих людям, системам или сетям.",
-  "terms.prohibited.action": "Shortli может приостановить или удалить ссылки и ограничить аккаунты при обоснованных признаках злоупотребления, угрозе безопасности или требовании закона.",
+  "terms.prohibited.body":
+    "Запрещено использовать Shortli для фишинга, вредоносных программ, кражи учётных данных, нежелательных массовых рассылок, незаконных материалов, выдачи себя за другое лицо, нарушения приватности, обхода контроля доступа и действий, вредящих людям, системам или сетям.",
+  "terms.prohibited.action":
+    "Shortli может приостановить или удалить ссылки и ограничить аккаунты при обоснованных признаках злоупотребления, угрозе безопасности или требовании закона.",
   "terms.availability.title": "Доступность",
-  "terms.availability.body": "Сервис предоставляется по мере возможности без гарантированного времени доступности или срока хранения. Технические работы, сбои хостинга, инциденты безопасности или требования закона могут временно ограничить доступ.",
+  "terms.availability.body":
+    "Сервис предоставляется по мере возможности без гарантированного времени доступности или срока хранения. Технические работы, сбои хостинга, инциденты безопасности или требования закона могут временно ограничить доступ.",
   "terms.liability.title": "Ответственность",
-  "terms.liability.body": "Shortli не одобряет содержимое сторонних сайтов и не отвечает за него. В пределах, разрешённых применимым законом, оператор не несёт ответственности за косвенные потери из-за недоступных или неправомерно использованных коротких ссылок.",
+  "terms.liability.body":
+    "Shortli не одобряет содержимое сторонних сайтов и не отвечает за него. В пределах, разрешённых применимым законом, оператор не несёт ответственности за косвенные потери из-за недоступных или неправомерно использованных коротких ссылок.",
   "terms.changes.title": "Изменения",
-  "terms.changes.body": "Условия могут обновляться при изменении сервиса или правовых требований. Дата в начале страницы обозначает текущую опубликованную редакцию.",
+  "terms.changes.body":
+    "Условия могут обновляться при изменении сервиса или правовых требований. Дата в начале страницы обозначает текущую опубликованную редакцию.",
   "terms.contact.title": "Связь",
-  "terms.contact.body": "Вопросы и сообщения о злоупотреблениях сейчас можно отправить через ссылку для связи в подвале. Укажите короткий код и краткое описание, но никогда не отправляйте пароль или значение сессии.",
+  "terms.contact.body":
+    "Вопросы и сообщения о злоупотреблениях сейчас можно отправить через ссылку для связи в подвале. Укажите короткий код и краткое описание, но никогда не отправляйте пароль или значение сессии.",
   "status.pageTitle": "Состояние сервиса",
   "status.label": "СИСТЕМА / LIVE",
   "status.title": "Текущее состояние сервиса.",
@@ -877,11 +966,14 @@ const ru: Record<TranslationKey, string> = {
   "status.degraded": "Частичный сбой",
   "status.offline": "API недоступен",
   "status.interface": "Веб-интерфейс",
-  "status.interfaceDescription": "Страница и её статический интерфейс доступны в вашем браузере.",
+  "status.interfaceDescription":
+    "Страница и её статический интерфейс доступны в вашем браузере.",
   "status.api": "Редиректы и API",
-  "status.apiDescription": "Создаёт ссылки, управляет ими, записывает аналитику и разрешает короткие коды.",
+  "status.apiDescription":
+    "Создаёт ссылки, управляет ими, записывает аналитику и разрешает короткие коды.",
   "status.database": "База данных",
-  "status.databaseDescription": "Хранит аккаунты, ссылки, сессии и обезличенные события переходов.",
+  "status.databaseDescription":
+    "Хранит аккаунты, ссылки, сессии и обезличенные события переходов.",
   "status.value.operational": "Работает",
   "status.value.degraded": "Есть сбой",
   "status.value.offline": "Недоступен",
@@ -889,11 +981,13 @@ const ru: Record<TranslationKey, string> = {
   "status.value.unknown": "Неизвестно",
   "status.liveCheck": "ЖИВАЯ ПРОВЕРКА",
   "status.refreshTitle": "Реальное измерение, а не статичная надпись.",
-  "status.refreshDescription": "Страница обращается к API, а тот проверяет соединение с базой данных. Результат автоматически обновляется каждые 30 секунд.",
+  "status.refreshDescription":
+    "Страница обращается к API, а тот проверяет соединение с базой данных. Результат автоматически обновляется каждые 30 секунд.",
   "status.lastChecked": "Последняя проверка",
   "status.apiVersion": "Версия API",
   "status.checkNow": "Проверить снова",
-  "status.note": "Текущий статус — это снимок доступности, а не соглашение об уровне сервиса или журнал прошлых инцидентов.",
+  "status.note":
+    "Текущий статус — это снимок доступности, а не соглашение об уровне сервиса или журнал прошлых инцидентов.",
 
   "footer.tagline": "Меньше ссылки. Больше смысла.",
   "footer.built": "ДЕЛИТЬСЯ ССЫЛКАМИ — ПРОЩЕ",
@@ -909,16 +1003,20 @@ const ru: Record<TranslationKey, string> = {
   "report.pageTitle": "Сообщить о нарушении",
   "report.label": "ДОВЕРИЕ / ЖАЛОБА",
   "report.title": "Сообщите об опасной ссылке.",
-  "report.intro": "Расскажите нам, если ссылка Shortli используется для фишинга, вредоносного ПО, выдачи себя за другое лицо или другого опасного содержимого. Жалоба попадёт в очередь модерации.",
+  "report.intro":
+    "Расскажите нам, если ссылка Shortli используется для фишинга, вредоносного ПО, выдачи себя за другое лицо или другого опасного содержимого. Жалоба попадёт в очередь модерации.",
   "report.processLabel": "Что будет дальше",
   "report.processTitle": "Каждый сигнал проверяет человек.",
-  "report.processDescription": "Администратор может сразу приостановить ссылку и запретить создание новых ссылок на её домен назначения.",
-  "report.privacyNote": "Почта необязательна. Для защиты от повторных жалоб сервис хранит только обезличенный хеш сетевого адреса.",
+  "report.processDescription":
+    "Администратор может сразу приостановить ссылку и запретить создание новых ссылок на её домен назначения.",
+  "report.privacyNote":
+    "Почта необязательна. Для защиты от повторных жалоб сервис хранит только обезличенный хеш сетевого адреса.",
   "report.linkLabel": "Короткая ссылка или код",
   "report.reasonLabel": "Причина",
   "report.emailLabel": "Почта (необязательно)",
   "report.detailsLabel": "Что произошло",
-  "report.detailsPlaceholder": "Опишите страницу, сообщение или поведение, из-за которого ссылка кажется подозрительной.",
+  "report.detailsPlaceholder":
+    "Опишите страницу, сообщение или поведение, из-за которого ссылка кажется подозрительной.",
   "report.reason.phishing": "Фишинг",
   "report.reason.malware": "Вредоносное ПО",
   "report.reason.spam": "Спам",
@@ -929,7 +1027,8 @@ const ru: Record<TranslationKey, string> = {
   "report.submitting": "Отправляем…",
   "report.error": "Не удалось отправить жалобу.",
   "report.successTitle": "Жалоба принята.",
-  "report.successDescription": "Теперь она видна администраторам. Опасную ссылку можно приостановить без изменения её адреса назначения.",
+  "report.successDescription":
+    "Теперь она видна администраторам. Опасную ссылку можно приостановить без изменения её адреса назначения.",
   "report.another": "Сообщить о другой ссылке",
 
   "admin.loading": "Загрузка…",
@@ -976,7 +1075,8 @@ const ru: Record<TranslationKey, string> = {
   "admin.unblock": "Разблокировать",
   "admin.dashboardLabel": "ЦЕНТР УПРАВЛЕНИЯ / КОМАНДА",
   "admin.dashboardTitle": "Управляйте всей платформой ссылок.",
-  "admin.dashboardDescription": "Следите за активностью, разбирайте жалобы и назначайте понятные уровни доступа к Shortli.",
+  "admin.dashboardDescription":
+    "Следите за активностью, разбирайте жалобы и назначайте понятные уровни доступа к Shortli.",
   "admin.yourAccess": "ВАШ ДОСТУП",
   "admin.sections": "Разделы администрирования",
   "admin.section.team": "Команда и роли",
@@ -984,7 +1084,8 @@ const ru: Record<TranslationKey, string> = {
   "admin.section.links": "Список ссылок",
   "admin.teamLabel": "ДОСТУП / КОМАНДА",
   "admin.teamTitle": "Люди и полномочия.",
-  "admin.teamDescription": "Зарегистрировано аккаунтов: {count}. Расширенный доступ выдаётся только через явную роль.",
+  "admin.teamDescription":
+    "Зарегистрировано аккаунтов: {count}. Расширенный доступ выдаётся только через явную роль.",
   "admin.userSearch": "Поиск на странице",
   "admin.userSearchPlaceholder": "Адрес электронной почты",
   "admin.usersLoading": "Загружаем пользователей…",
@@ -999,15 +1100,20 @@ const ru: Record<TranslationKey, string> = {
   "admin.userPages": "Страницы списка пользователей",
   "admin.previous": "Назад",
   "admin.next": "Вперёд",
-  "admin.roleNote": "Владелец управляет всеми ролями. Администратор может назначать администраторов, техподдержку и пользователей. Техподдержка работает со ссылками и жалобами без доступа к команде.",
+  "admin.roleNote":
+    "Владелец управляет всеми ролями. Администратор может назначать администраторов, техподдержку и пользователей. Техподдержка работает со ссылками и жалобами без доступа к команде.",
   "admin.role.owner": "Владелец",
   "admin.role.admin": "Администратор",
   "admin.role.support": "Техподдержка",
   "admin.role.user": "Пользователь",
-  "admin.roleDescription.owner": "Полный контроль платформы, включая владельцев и роли.",
-  "admin.roleDescription.admin": "Управление, модерация и команда без контроля владельцев.",
-  "admin.roleDescription.support": "Список ссылок и очередь жалоб без управления ролями.",
-  "admin.roleDescription.user": "Только личные ссылки, без доступа к администрированию.",
+  "admin.roleDescription.owner":
+    "Полный контроль платформы, включая владельцев и роли.",
+  "admin.roleDescription.admin":
+    "Управление, модерация и команда без контроля владельцев.",
+  "admin.roleDescription.support":
+    "Список ссылок и очередь жалоб без управления ролями.",
+  "admin.roleDescription.user":
+    "Только личные ссылки, без доступа к администрированию.",
 
   "pagination.previous": "Назад",
   "pagination.next": "Вперёд",

@@ -5,6 +5,8 @@ import { useUser } from "../../../context/UserContext";
 import { apiUrl } from "../../../lib/urls";
 import styles from "./loginModal.module.css";
 import { useLocale } from "../../../context/LocaleContext";
+import { useDialog } from "../../../hooks/useDialog";
+import { apiJSON } from "../../../lib/api";
 
 interface LoginResponse {
   user_id: number;
@@ -33,22 +35,12 @@ export default function LoginModal({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const emailRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useDialog(isOpen, onClose, emailRef);
+  const successTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    if (!isOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleKeyDown);
-    window.setTimeout(() => emailRef.current?.focus(), 80);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+    return () => window.clearTimeout(successTimer.current);
+  }, [isOpen]);
 
   const closeModal = () => {
     setError("");
@@ -63,33 +55,28 @@ export default function LoginModal({
     setSuccess("");
 
     try {
-      const response = await fetch(apiUrl("/api/login"), {
+      const data = await apiJSON<LoginResponse>(apiUrl("/api/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(apiError(errorData.error, "login.failed"));
-      }
-
-      const data: LoginResponse = await response.json();
       login(data);
       setSuccess(t("login.welcome", { email: data.email }));
       setEmail("");
       setPassword("");
-      window.setTimeout(() => {
+      successTimer.current = window.setTimeout(() => {
         onLoginSuccess?.();
         onClose();
         setSuccess("");
       }, 650);
     } catch (requestError) {
       setError(
-        requestError instanceof Error
-          ? requestError.message
-          : t("login.genericError"),
+        apiError(
+          requestError instanceof Error ? requestError.message : undefined,
+          "login.genericError",
+        ),
       );
     } finally {
       setLoading(false);
@@ -107,6 +94,8 @@ export default function LoginModal({
     >
       <div
         className={styles.signin_modal}
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="signin-title"

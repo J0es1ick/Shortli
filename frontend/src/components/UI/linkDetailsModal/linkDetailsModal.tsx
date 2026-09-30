@@ -1,8 +1,10 @@
+import { apiFetch } from "../../../lib/api";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocale } from "../../../context/LocaleContext";
 import { apiUrl, buildShortUrl } from "../../../lib/urls";
 import styles from "./linkDetailsModal.module.css";
+import { useDialog } from "../../../hooks/useDialog";
 
 export interface ManagedLink {
   url_id: number;
@@ -56,7 +58,7 @@ export default function LinkDetailsModal({ item, onClose, onUpdated }: Props) {
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    fetch(apiUrl(`/api/urls/${item.short_code}/analytics?days=${period}`), {
+    apiFetch(apiUrl(`/api/urls/${item.short_code}/analytics?days=${period}`), {
       credentials: "include",
       signal: controller.signal,
     })
@@ -67,7 +69,9 @@ export default function LinkDetailsModal({ item, onClose, onUpdated }: Props) {
         }
         return response.json() as Promise<Analytics>;
       })
-      .then(setAnalytics)
+      .then((data) => {
+        if (!controller.signal.aborted) setAnalytics(data);
+      })
       .catch((requestError) => {
         if (
           requestError instanceof DOMException &&
@@ -80,7 +84,9 @@ export default function LinkDetailsModal({ item, onClose, onUpdated }: Props) {
             : t("manage.analyticsError"),
         );
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
     return () => controller.abort();
   }, [apiError, item, period, t]);
 
@@ -94,14 +100,7 @@ export default function LinkDetailsModal({ item, onClose, onUpdated }: Props) {
     );
   }, [item]);
 
-  useEffect(() => {
-    if (!item) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [item, onClose]);
+  const dialogRef = useDialog(!!item, onClose);
 
   const maxDaily = useMemo(
     () => Math.max(1, ...(analytics?.daily.map((entry) => entry.count) ?? [1])),
@@ -114,7 +113,7 @@ export default function LinkDetailsModal({ item, onClose, onUpdated }: Props) {
     setSaving(true);
     setError("");
     try {
-      const response = await fetch(apiUrl(`/api/urls/${item.short_code}`), {
+      const response = await apiFetch(apiUrl(`/api/urls/${item.short_code}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -183,6 +182,8 @@ export default function LinkDetailsModal({ item, onClose, onUpdated }: Props) {
     >
       <section
         className={styles.dialog}
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="link-details-title"

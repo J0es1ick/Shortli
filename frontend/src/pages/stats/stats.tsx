@@ -12,21 +12,22 @@ import AbuseReports from "../../components/abuseReports/abuseReports";
 import AdminUsers from "../../components/adminUsers/adminUsers";
 
 export default function Stats() {
-  const { user, isLoading } = useUser();
+  const { user, isLoading, authError, checkAuth } = useUser();
   const { t } = useLocale();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && !hasStaffAccess(user)) {
+    if (!isLoading && !authError && !hasStaffAccess(user)) {
       navigate("/");
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, authError, navigate]);
 
   if (isLoading) {
     return <div>{t("admin.loading")}</div>;
   }
 
   if (!user || !hasStaffAccess(user)) {
+    if (authError) return <><Header /><main role="alert"><p>{t("header.authFailed")}</p><button onClick={() => void checkAuth()}>{t("common.tryAgain")}</button></main></>;
     return <div>{t("admin.accessDenied")}</div>;
   }
 

@@ -3,17 +3,21 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useRef,
+  useCallback,
   type ReactNode,
 } from "react";
 import { apiUrl } from "../lib/urls";
+import { apiJSON, ApiError } from "../lib/api";
 import type { User } from "../lib/userAccess";
 
 interface UserContextType {
   user: User | null;
   isLoading: boolean;
+  authError: boolean;
   login: (userData: User) => void;
   logout: () => Promise<void>;
-  checkAuth: () => void;
+  checkAuth: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -23,56 +27,61 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
+  const revision = useRef(0);
 
   const login = (userData: User) => {
+    revision.current++;
+    setAuthError(false);
+    setIsLoading(false);
     setUser(userData);
   };
 
   const logout = async () => {
-    try {
-      await fetch(apiUrl("/api/logout"), {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      setUser(null);
-    }
+    const current = ++revision.current;
+    await apiJSON(apiUrl("/api/logout"), { method: "POST" });
+    if (current !== revision.current) return;
+    setUser(null);
+    setAuthError(false);
+    setIsLoading(false);
   };
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
+    const current = ++revision.current;
+    setIsLoading(true);
     try {
-      const response = await fetch(apiUrl("/api/me"), {
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      } else {
+      const data = await apiJSON<User>(apiUrl("/api/me"));
+      if (current !== revision.current) return;
+      setUser(data);
+      setAuthError(false);
+    } catch (error) {
+      if (current !== revision.current) return;
+      if (error instanceof ApiError && error.status === 401) {
         setUser(null);
-      }
-    } catch (error) {
-      console.error("Auth check error:", error);
-      setUser(null);
+        setAuthError(false);
+      } else setAuthError(true);
     } finally {
-      setIsLoading(false);
+      if (current === revision.current) setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    checkAuth();
   }, []);
 
+  useEffect(() => {
+    const state = revision;
+    void checkAuth();
+    return () => {
+      state.current++;
+    };
+  }, [checkAuth]);
+
   return (
-    <UserContext.Provider value={{ user, isLoading, login, logout, checkAuth }}>
+    <UserContext.Provider
+      value={{ user, isLoading, authError, login, logout, checkAuth }}
+    >
       {children}
     </UserContext.Provider>
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useUser = () => {
   const context = useContext(UserContext);
   if (context === undefined) {

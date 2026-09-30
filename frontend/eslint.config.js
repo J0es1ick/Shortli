@@ -24,4 +24,14 @@ export default tseslint.config([
       'react-hooks/set-state-in-effect': 'off',
     },
   },
+  {
+    files: [
+      'src/context/LocaleContext.tsx',
+      'src/context/ThemeContext.tsx',
+      'src/context/UserContext.tsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

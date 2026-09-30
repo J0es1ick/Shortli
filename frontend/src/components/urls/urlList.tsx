@@ -1,3 +1,4 @@
+import { apiFetch } from "../../lib/api";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { apiUrl } from "../../lib/urls";
 import Pagination from "../UI/pagination/pagination";
@@ -38,7 +39,7 @@ const getURLs = async (
   const endpoint = query.trim()
     ? `/api/admin/search?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`
     : `/api/admin/urls?page=${page}&limit=${limit}`;
-  const response = await fetch(apiUrl(endpoint), { credentials: "include" });
+  const response = await apiFetch(apiUrl(endpoint), { credentials: "include" });
 
   if (!response.ok) {
     if (response.status === 401) throw new Error(errors.auth);
@@ -105,15 +106,15 @@ export default function URLList() {
   };
 
   const handleDelete = async (shortCode: string) => {
-    const response = await fetch(apiUrl(`/api/admin/urls/${shortCode}`), {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (!response.ok) {
-      setError(t("admin.deleteError"));
-      return;
+    try {
+      const response = await apiFetch(apiUrl(`/api/admin/urls/${shortCode}`), {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error(t("admin.deleteError"));
+      await fetchURLs();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : t("admin.deleteError"));
     }
-    await fetchURLs();
   };
 
   const totalPages = Math.max(1, Math.ceil(totalURLs / limit));

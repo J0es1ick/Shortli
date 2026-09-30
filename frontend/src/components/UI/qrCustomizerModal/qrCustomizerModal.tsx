@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import styles from "./qrCustomizerModal.module.css";
 import { useLocale } from "../../../context/LocaleContext";
 import type { TranslationKey } from "../../../i18n/translations";
+import { useDialog } from "../../../hooks/useDialog";
 
 interface QRCode {
   base64: string;
@@ -69,21 +70,7 @@ export default function QRCustomizerModal({
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const baseQR = qrCode?.base64;
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+  const dialogRef = useDialog(isOpen && !!qrCode, onClose);
 
   useEffect(() => {
     if (!isOpen || !baseQR) return;
@@ -235,6 +222,8 @@ export default function QRCustomizerModal({
     >
       <div
         className={styles.modal}
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="qr-modal-title"

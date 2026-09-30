@@ -1,3 +1,4 @@
+import { apiFetch } from "../../lib/api";
 import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "../../context/LocaleContext";
 import { apiUrl } from "../../lib/urls";
@@ -45,10 +46,10 @@ export default function AbuseReports() {
     setError("");
     try {
       const [reportResponse, domainResponse] = await Promise.all([
-        fetch(apiUrl("/api/admin/abuse-reports?status=pending&limit=50"), {
+        apiFetch(apiUrl("/api/admin/abuse-reports?status=pending&limit=50"), {
           credentials: "include",
         }),
-        fetch(apiUrl("/api/admin/blocked-domains"), {
+        apiFetch(apiUrl("/api/admin/blocked-domains"), {
           credentials: "include",
         }),
       ]);
@@ -87,7 +88,7 @@ export default function AbuseReports() {
     setBusy(report.report_id);
     setError("");
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         apiUrl(`/api/admin/abuse-reports/${report.report_id}`),
         {
           method: "PATCH",
@@ -118,7 +119,7 @@ export default function AbuseReports() {
     setBusy(-domain.domain_id);
     setError("");
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         apiUrl(`/api/admin/blocked-domains/${domain.domain_id}`),
         { method: "DELETE", credentials: "include" },
       );

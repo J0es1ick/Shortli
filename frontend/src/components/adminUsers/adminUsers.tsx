@@ -1,3 +1,4 @@
+import { apiFetch } from "../../lib/api";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useUser } from "../../context/UserContext";
 import {
@@ -46,7 +47,7 @@ export default function AdminUsers() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         apiUrl(`/api/admin/users?page=${page}&limit=50`),
         { credentials: "include" },
       );
@@ -103,7 +104,7 @@ export default function AdminUsers() {
     setSaved(null);
     setError("");
     try {
-      const response = await fetch(apiUrl(`/api/admin/users/${entry.user_id}`), {
+      const response = await apiFetch(apiUrl(`/api/admin/users/${entry.user_id}`), {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

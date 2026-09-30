@@ -1,3 +1,4 @@
+import { apiFetch } from "../../lib/api";
 import {
   useCallback,
   useEffect,
@@ -43,7 +44,7 @@ export default function DevelopersPage() {
     if (!user) return;
     setLoadingKeys(true);
     try {
-      const response = await fetch(apiUrl("/api/developer/keys"), {
+      const response = await apiFetch(apiUrl("/api/developer/keys"), {
         credentials: "include",
       });
       if (!response.ok) throw new Error(t("developers.keysLoadError"));
@@ -73,7 +74,7 @@ export default function DevelopersPage() {
     setSaving(true);
     setError("");
     try {
-      const response = await fetch(apiUrl("/api/developer/keys"), {
+      const response = await apiFetch(apiUrl("/api/developer/keys"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -98,15 +99,17 @@ export default function DevelopersPage() {
 
   const revokeKey = async (id: number) => {
     setError("");
-    const response = await fetch(apiUrl(`/api/developer/keys/${id}`), {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (!response.ok) {
-      setError(t("developers.keyRevokeError"));
-      return;
+    try {
+      const response = await apiFetch(apiUrl(`/api/developer/keys/${id}`), {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error(t("developers.keyRevokeError"));
+      await fetchKeys();
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : t("developers.keyRevokeError"),
+      );
     }
-    await fetchKeys();
   };
 
   const copy = async (value: string, label: string) => {

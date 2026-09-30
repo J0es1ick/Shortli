@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   useCallback,
@@ -32,6 +31,12 @@ const LocaleContext = createContext<LocaleContextValue | undefined>(undefined);
 const storageKey = "shortli:locale";
 
 const ruApiErrors: Record<string, string> = {
+  "Failed to end session. Please try again.":
+    "Не удалось завершить сессию на сервере. Попробуйте ещё раз.",
+  "Authentication temporarily unavailable":
+    "Проверка сессии временно недоступна. Повторите попытку позже.",
+  "Invalid server response":
+    "Сервер вернул некорректный ответ. Попробуйте ещё раз.",
   "Invalid email or password": "Неверная почта или пароль.",
   "User with this email already exists":
     "Пользователь с такой почтой уже существует.",

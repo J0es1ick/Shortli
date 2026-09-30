@@ -1,3 +1,4 @@
+import { apiFetch } from "../../lib/api";
 import { useCallback, useEffect, useState } from "react";
 import { useUser } from "../../context/UserContext";
 import { apiUrl, buildShortUrl } from "../../lib/urls";
@@ -44,7 +45,7 @@ export default function UserHistory() {
     setError("");
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         apiUrl(`/api/history?page=${page}&limit=${limit}`),
         { credentials: "include" },
       );
@@ -93,7 +94,7 @@ export default function UserHistory() {
     setDeletingCode(shortCode);
     setError("");
     try {
-      const response = await fetch(apiUrl(`/api/urls/${shortCode}`), {
+      const response = await apiFetch(apiUrl(`/api/urls/${shortCode}`), {
         method: "DELETE",
         credentials: "include",
       });
@@ -138,7 +139,7 @@ export default function UserHistory() {
     return t("history.clicks");
   };
 
-  if (loading) {
+  if (loading && urls.length === 0) {
     return (
       <div className={styles.loading} aria-live="polite">
         <i />

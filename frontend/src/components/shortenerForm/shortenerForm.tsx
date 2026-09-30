@@ -1,6 +1,8 @@
+import { apiFetch } from "../../lib/api";
 import { useState, type FormEvent } from "react";
 import { apiUrl, buildShortUrl } from "../../lib/urls";
 import { useLocale } from "../../context/LocaleContext";
+import { useUser } from "../../context/UserContext";
 import QRCustomizerModal from "../UI/qrCustomizerModal/qrCustomizerModal";
 import ShareModal from "../UI/shareModal/shareModal";
 import styles from "./shortenerForm.module.css";
@@ -18,6 +20,7 @@ type Lifetime = "never" | "day" | "week" | "month" | "custom";
 
 export default function ShortenerForm() {
   const { t, apiError } = useLocale();
+  const { user, isLoading: authLoading, authError } = useUser();
   const [url, setUrl] = useState("");
   const [customAlias, setCustomAlias] = useState("");
   const [lifetime, setLifetime] = useState<Lifetime>("never");
@@ -32,6 +35,10 @@ export default function ShortenerForm() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (authLoading || authError) {
+      setError(t("header.authFailed"));
+      return;
+    }
     const trimmedUrl = url.trim();
     const trimmedAlias = customAlias.trim().toLowerCase();
 
@@ -67,7 +74,7 @@ export default function ShortenerForm() {
     setCopied(false);
 
     try {
-      const response = await fetch(apiUrl("/api/shorten"), {
+      const response = await apiFetch(apiUrl("/api/shorten"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -136,7 +143,7 @@ export default function ShortenerForm() {
             disabled={loading}
             aria-describedby={error ? "shortener-error" : "shortener-note"}
           />
-          <button type="submit" disabled={loading}>
+          <button type="submit" disabled={loading || authLoading || authError}>
             <span>
               {loading ? t("shortener.working") : t("shortener.submit")}
             </span>
@@ -204,7 +211,7 @@ export default function ShortenerForm() {
               />
             </label>
           )}
-          <p>{t("shortener.lifetimeNote")}</p>
+          <p>{t(user ? "shortener.lifetimeNote" : "shortener.guestNote")}</p>
         </fieldset>
         {error && (
           <p id="shortener-error" className={styles.error} role="alert">

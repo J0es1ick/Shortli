@@ -57,7 +57,7 @@
   position: relative;
   color: var(--text-secondary);
   text-decoration: none;
-  font: 600 11px/1 var(--font-mono);
+  font: 600 12px/1 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -104,7 +104,7 @@
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--line-soft);
-  font: 600 11px/1 var(--font-mono);
+  font: 600 12px/1 var(--font-mono);
   letter-spacing: 0.08em;
 }
 
@@ -120,7 +120,7 @@
   background: transparent;
   border: 1px solid var(--line-soft);
   cursor: pointer;
-  font: 600 11px/1 var(--font-mono);
+  font: 600 12px/1 var(--font-mono);
   letter-spacing: 0.06em;
   isolation: isolate;
 }
@@ -142,7 +142,9 @@
 }
 
 .locale_toggle span {
-  transition: color 220ms ease, transform 220ms ease;
+  transition:
+    color 220ms ease,
+    transform 220ms ease;
 }
 
 .locale_toggle .active_locale {
@@ -158,7 +160,9 @@
   border-radius: 50%;
   background: var(--text-primary);
   box-shadow: inset 0 0 0 2px var(--page-bg);
-  transition: transform 280ms ease, background 280ms ease;
+  transition:
+    transform 280ms ease,
+    background 280ms ease;
 }
 
 .theme_toggle i.dark {
@@ -173,7 +177,10 @@
   border: 1px solid var(--text-primary);
   font-size: 12px;
   font-weight: 600;
-  transition: transform 160ms ease, color 160ms ease, background 160ms ease;
+  transition:
+    transform 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
 }
 
 .sign_in_button {
@@ -196,7 +203,7 @@
 
 .account_button span:last-child {
   color: color-mix(in srgb, var(--text-inverse) 62%, transparent);
-  font: 600 11px/1 var(--font-mono);
+  font: 600 12px/1 var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -210,7 +217,7 @@
 
 .auth_loading {
   color: var(--text-muted);
-  font: 600 11px/1 var(--font-mono);
+  font: 600 12px/1 var(--font-mono);
   letter-spacing: 0.1em;
   animation: sync-pulse 1.2s ease-in-out infinite;
 }
@@ -222,6 +229,7 @@
   display: grid;
   place-items: center;
   padding: 20px;
+  overflow-y: auto;
   background: var(--scrim);
   backdrop-filter: blur(10px);
   animation: overlay-in 180ms ease both;
@@ -230,6 +238,8 @@
 .confirm_dialog {
   width: min(460px, 100%);
   padding: 34px;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--line-soft);
   box-shadow: var(--shadow-lg);
@@ -238,7 +248,7 @@
 
 .confirm_dialog > span {
   color: var(--text-muted);
-  font: 600 11px/1 var(--font-mono);
+  font: 600 12px/1 var(--font-mono);
   letter-spacing: 0.12em;
 }
 
@@ -256,6 +266,13 @@
   line-height: 1.55;
 }
 
+.confirm_dialog p[role="alert"] {
+  margin-top: 16px;
+  color: var(--text-primary);
+  border-left: 2px solid currentColor;
+  padding-left: 12px;
+}
+
 .confirm_dialog > div {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -270,7 +287,11 @@
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
-  transition: color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  transition:
+    color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .confirm_dialog button:first-child {
@@ -298,7 +319,7 @@
 
 .confirm_dialog button:active:not(:disabled) {
   box-shadow: none;
-  transform: translateY(1px) scale(.985);
+  transform: translateY(1px) scale(0.985);
 }
 
 .confirm_dialog button:disabled {
