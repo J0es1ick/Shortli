@@ -197,7 +197,6 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	}
 	existingURL, lookupErr := h.urlRepository.FindUrlByOriginalForOwner(r.Context(), req.OriginalURL, userID)
 	if lookupErr == nil {
-		h.redirectCache.Set(existingURL)
 		h.writeShortenResponse(w, r, http.StatusOK, existingURL)
 		return
 	}
@@ -273,7 +272,6 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, http.StatusInternalServerError, "Failed to save URL")
 		return
 	}
-	h.redirectCache.Set(savedURL)
 
 	status := http.StatusOK
 	if created {
@@ -418,36 +416,24 @@ func (h *Handler) AdminStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// totalUsers, err := h.userRepo.GetTotalUsers()
-	// if err != nil {
-	//     response.Error(w, http.StatusInternalServerError, "Failed to get users count")
-	//     return
-	// }
-
 	response.JSON(w, http.StatusOK, map[string]interface{}{
 		"stats": map[string]interface{}{
 			"total_urls":   totalURLs,
 			"total_clicks": totalClicks,
-			// "total_users":  totalUsers,
 		},
 	})
 }
 
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	shortCode := strings.TrimPrefix(r.URL.Path, "/")
-	url, cacheHit := h.redirectCache.Get(shortCode)
-	if !cacheHit {
-		var err error
-		url, err = h.urlRepository.FindUrlByCode(r.Context(), shortCode)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				response.Error(w, http.StatusNotFound, "URL not found")
-			} else {
-				response.Error(w, http.StatusInternalServerError, "Database error")
-			}
-			return
+	url, cacheHit, err := h.redirectCache.Resolve(r.Context(), shortCode, h.urlRepository.FindUrlByCode)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			response.Error(w, http.StatusNotFound, "URL not found")
+		} else {
+			response.Error(w, http.StatusServiceUnavailable, "Link temporarily unavailable")
 		}
-		h.redirectCache.Set(url)
+		return
 	}
 	if cacheHit {
 		w.Header().Set("X-Shortli-Cache", "HIT")
@@ -522,7 +508,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	url.IsActive, url.ExpiresAt = isActive, expiresAt
-	h.redirectCache.Set(url)
+	h.redirectCache.Delete(shortCode)
 	response.JSON(w, http.StatusOK, url)
 }
 

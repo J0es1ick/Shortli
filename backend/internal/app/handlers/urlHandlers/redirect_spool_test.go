@@ -50,9 +50,11 @@ func TestRedirectRemainsResponsiveWithLargeFailedSpool(t *testing.T) {
 		clickRecorder: recorder,
 		clientIP:      middleware.NewClientIPResolver(""),
 	}
-	handler.redirectCache.Set(&models.URL{
-		ID: 1, OriginalURL: "https://example.com/destination", ShortCode: "fast",
-		IsActive: true,
+	_, _, _ = handler.redirectCache.Resolve(context.Background(), "fast", func(context.Context, string) (*models.URL, error) {
+		return &models.URL{
+			ID: 1, OriginalURL: "https://example.com/destination", ShortCode: "fast",
+			IsActive: true,
+		}, nil
 	})
 
 	const parallelRedirects = 512
