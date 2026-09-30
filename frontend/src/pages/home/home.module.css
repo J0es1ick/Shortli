@@ -26,7 +26,7 @@
 .hero_meta,
 .section_heading > span,
 .prompt_index {
-  font: 600 11px/1.2 var(--font-mono);
+  font: 600 12px/1.2 var(--font-mono);
   letter-spacing: 0.12em;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -82,7 +82,7 @@
   color: var(--text-primary);
   border: 1px solid var(--text-primary);
   text-decoration: none;
-  font: 650 11px/1 var(--font-mono);
+  font: 650 12px/1 var(--font-mono);
   letter-spacing: .05em;
   text-transform: uppercase;
   transition: color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
@@ -177,7 +177,7 @@
   justify-content: space-between;
   gap: 18px;
   color: var(--text-muted);
-  font: 600 11px/1.25 var(--font-mono);
+  font: 600 12px/1.25 var(--font-mono);
   letter-spacing: .1em;
   text-transform: uppercase;
 }
@@ -209,7 +209,7 @@
   align-items: center;
   padding: 0 13px;
   border: 1px solid var(--line-soft);
-  font: 600 11px/1.25 var(--font-mono);
+  font: 600 12px/1.25 var(--font-mono);
 }
 
 .console_route span {
@@ -266,7 +266,7 @@
 
 .console_grid span {
   color: var(--text-muted);
-  font: 600 11px/1 var(--font-mono);
+  font: 600 12px/1 var(--font-mono);
 }
 
 .console_grid strong {
@@ -278,7 +278,7 @@
   margin-top: 24px;
   padding-top: 18px;
   border-top: 1px solid var(--line-soft);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .history_section {
@@ -297,7 +297,7 @@
 .benefits_intro > span,
 .benefit_grid article > span {
   color: var(--text-muted);
-  font: 600 11px/1 var(--font-mono);
+  font: 600 12px/1 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -367,7 +367,7 @@
   justify-content: center;
   padding: 10px 16px;
   color: var(--text-secondary);
-  font: 600 11px/1.35 var(--font-mono);
+  font: 600 12px/1.35 var(--font-mono);
   letter-spacing: .08em;
   text-align: center;
   text-transform: uppercase;
@@ -477,7 +477,7 @@
   display: grid;
   place-items: center;
   color: var(--text-muted);
-  font: 600 11px/1 var(--font-mono);
+  font: 600 12px/1 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }

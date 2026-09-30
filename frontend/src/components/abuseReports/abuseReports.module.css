@@ -118,7 +118,10 @@
   border: 1px solid var(--line-soft);
   cursor: pointer;
   font: 650 11px/1 var(--font-mono);
-  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
 }
 
 .actions button:hover,
