@@ -6,9 +6,9 @@ import (
 )
 
 func CORSMiddleware(next http.Handler, allowedOrigin string) http.Handler {
+	allowedOrigin = strings.TrimRight(allowedOrigin, "/")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		allowedOrigin = strings.TrimRight(allowedOrigin, "/")
 		publicAPI := strings.HasPrefix(r.URL.Path, "/api/v1/")
 		if publicAPI && origin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
