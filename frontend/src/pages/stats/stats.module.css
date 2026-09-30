@@ -11,19 +11,19 @@
   width: min(1400px, calc(100% - 48px));
   min-height: 430px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(310px, .48fr);
+  grid-template-columns: minmax(0, 1fr) minmax(310px, 0.48fr);
   gap: clamp(42px, 8vw, 130px);
   align-items: end;
   margin: 0 auto;
   padding: clamp(80px, 10vw, 148px) 0 68px;
-  animation: hero-in 620ms cubic-bezier(.22, 1, .36, 1) both;
+  animation: hero-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .hero > div:first-child > span,
 .roleCard > span {
   color: var(--text-muted);
   font: 600 11px/1 var(--font-mono);
-  letter-spacing: .12em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -32,8 +32,8 @@
   margin: 22px 0 20px;
   font-size: clamp(58px, 7.4vw, 112px);
   font-weight: 400;
-  line-height: .86;
-  letter-spacing: -.066em;
+  line-height: 0.86;
+  letter-spacing: -0.066em;
 }
 
 .hero > div:first-child > p {
@@ -53,19 +53,21 @@
   background: color-mix(in srgb, var(--surface-raised) 82%, transparent);
   border: 1px solid var(--line-soft);
   box-shadow: var(--shadow-sm);
-  transition: transform 220ms ease, box-shadow 220ms ease;
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease;
 }
 
 .roleCard:hover {
   box-shadow: var(--shadow-lg);
-  transform: translateY(-4px) rotate(-.25deg);
+  transform: translateY(-4px) rotate(-0.25deg);
 }
 
 .roleCard strong {
   margin-top: 52px;
   font-size: 30px;
   font-weight: 500;
-  letter-spacing: -.035em;
+  letter-spacing: -0.035em;
 }
 
 .roleCard p {
@@ -96,9 +98,12 @@
   border-bottom: 1px solid var(--line-soft);
   text-decoration: none;
   font: 600 11px/1 var(--font-mono);
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  transition: color 180ms ease, background 180ms ease, transform 180ms ease;
+  transition:
+    color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
 }
 
 .sectionNav a::after {

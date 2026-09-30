@@ -128,7 +128,9 @@ export default function Home() {
           ) : authError ? (
             <div role="alert">
               <p>{t("header.authFailed")}</p>
-              <button type="button" onClick={() => void checkAuth()}>{t("common.tryAgain")}</button>
+              <button type="button" onClick={() => void checkAuth()}>
+                {t("common.tryAgain")}
+              </button>
             </div>
           ) : user ? (
             <UserHistory />

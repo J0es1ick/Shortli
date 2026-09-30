@@ -28,7 +28,8 @@ export default function StatusPage() {
         credentials: "omit",
       });
       const data = (await response.json()) as HealthResponse;
-      if (!data.services || !["operational", "degraded"].includes(data.status)) throw new Error("Invalid health response");
+      if (!data.services || !["operational", "degraded"].includes(data.status))
+        throw new Error("Invalid health response");
       setHealth(data);
       setState(
         response.ok && data.status === "operational"

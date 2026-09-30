@@ -1,7 +1,9 @@
 .url_item {
   min-height: 76px;
   display: grid;
-  grid-template-columns: 64px minmax(260px, 1.5fr) 100px 80px 80px 120px minmax(180px, 0.9fr) 92px;
+  grid-template-columns:
+    64px minmax(260px, 1.5fr) 100px 80px 80px 120px minmax(180px, 0.9fr)
+    92px;
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
@@ -51,30 +53,33 @@
   border: 1px solid var(--line-soft);
   cursor: pointer;
   font-size: 20px;
-  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease;
 }
 
 .actions {
-	display: flex;
-	justify-content: flex-end;
-	gap: 5px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
 }
 
 .manage_button {
-	width: 36px;
-	height: 36px;
-	display: grid;
-	place-items: center;
-	color: var(--text-primary);
-	background: transparent;
-	border: 1px solid var(--line-soft);
-	cursor: pointer;
-	font-size: 15px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--line-soft);
+  cursor: pointer;
+  font-size: 15px;
 }
 
 .manage_button:hover {
-	color: var(--text-inverse);
-	background: var(--text-primary);
+  color: var(--text-inverse);
+  background: var(--text-primary);
 }
 
 .delete_button:hover {

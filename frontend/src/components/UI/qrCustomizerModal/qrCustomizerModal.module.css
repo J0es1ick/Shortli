@@ -66,7 +66,10 @@
   cursor: pointer;
   font-size: 24px;
   line-height: 1;
-  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
 }
 
 .close_button:hover {
@@ -137,7 +140,10 @@
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
-  transition: transform 160ms ease, color 160ms ease, background 160ms ease;
+  transition:
+    transform 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
 }
 
 .primary_button {
@@ -248,7 +254,9 @@
   border: 1px solid var(--line-soft);
   cursor: pointer;
   font: 600 11px/1 var(--font-mono);
-  transition: border-color 160ms ease, transform 160ms ease;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease;
 }
 
 .presets button:hover {
@@ -274,7 +282,9 @@
   padding: 22px;
   border: 1px dashed var(--line-soft);
   cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .upload_label:hover {

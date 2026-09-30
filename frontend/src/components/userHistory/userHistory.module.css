@@ -5,7 +5,9 @@
 .history_header,
 .history_item {
   display: grid;
-  grid-template-columns: 54px minmax(260px, 1.5fr) minmax(88px, 0.35fr) minmax(150px, 0.52fr) minmax(220px, auto);
+  grid-template-columns:
+    54px minmax(260px, 1.5fr) minmax(88px, 0.35fr) minmax(150px, 0.52fr)
+    minmax(220px, auto);
   gap: 18px;
   align-items: center;
 }
@@ -39,7 +41,9 @@
   padding: 18px;
   background: color-mix(in srgb, var(--surface) 82%, transparent);
   border-bottom: 1px solid var(--line-soft);
-  transition: background 180ms ease, transform 180ms ease;
+  transition:
+    background 180ms ease,
+    transform 180ms ease;
 }
 
 .history_item:hover {
@@ -133,7 +137,10 @@
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
-  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease;
 }
 
 .item_actions button:hover,

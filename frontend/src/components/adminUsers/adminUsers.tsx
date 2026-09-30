@@ -1,11 +1,7 @@
 import { apiFetch } from "../../lib/api";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useUser } from "../../context/UserContext";
-import {
-  getUserRole,
-  type User,
-  type UserRole,
-} from "../../lib/userAccess";
+import { getUserRole, type User, type UserRole } from "../../lib/userAccess";
 import { useLocale } from "../../context/LocaleContext";
 import { apiUrl } from "../../lib/urls";
 import styles from "./adminUsers.module.css";
@@ -104,12 +100,15 @@ export default function AdminUsers() {
     setSaved(null);
     setError("");
     try {
-      const response = await apiFetch(apiUrl(`/api/admin/users/${entry.user_id}`), {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: nextRole }),
-      });
+      const response = await apiFetch(
+        apiUrl(`/api/admin/users/${entry.user_id}`),
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: nextRole }),
+        },
+      );
       if (!response.ok) {
         const payload = (await response.json().catch(() => ({}))) as {
           error?: string;
@@ -221,7 +220,9 @@ export default function AdminUsers() {
                 <button
                   type="button"
                   className={styles.saveButton}
-                  disabled={!editable || busy === entry.user_id || draft === role}
+                  disabled={
+                    !editable || busy === entry.user_id || draft === role
+                  }
                   onClick={() => void saveRole(entry)}
                 >
                   {busy === entry.user_id

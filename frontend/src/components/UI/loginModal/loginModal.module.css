@@ -59,7 +59,10 @@
   border: 1px solid var(--line-soft);
   cursor: pointer;
   font-size: 24px;
-  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
 }
 
 .close_button:hover {
@@ -88,7 +91,9 @@
   border-radius: 0;
   outline: 0;
   font-size: 15px;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .form_group input:focus {
@@ -115,7 +120,9 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-  transition: color 160ms ease, background 160ms ease;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
 }
 
 .submit_button:hover:not(:disabled) {

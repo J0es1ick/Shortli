@@ -27,7 +27,18 @@ export default function Stats() {
   }
 
   if (!user || !hasStaffAccess(user)) {
-    if (authError) return <><Header /><main role="alert"><p>{t("header.authFailed")}</p><button onClick={() => void checkAuth()}>{t("common.tryAgain")}</button></main></>;
+    if (authError)
+      return (
+        <>
+          <Header />
+          <main role="alert">
+            <p>{t("header.authFailed")}</p>
+            <button onClick={() => void checkAuth()}>
+              {t("common.tryAgain")}
+            </button>
+          </main>
+        </>
+      );
     return <div>{t("admin.accessDenied")}</div>;
   }
 

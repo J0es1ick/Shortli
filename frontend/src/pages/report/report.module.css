@@ -90,7 +90,9 @@
   border-radius: 0;
   outline: none;
   font: inherit;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .form input,
@@ -129,7 +131,9 @@
   border: 1px solid var(--text-primary);
   cursor: pointer;
   font-weight: 700;
-  transition: transform 160ms ease, opacity 160ms ease;
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease;
 }
 
 .form > button:hover,
