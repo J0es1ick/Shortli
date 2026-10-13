@@ -10,6 +10,7 @@
     "build:demo": "tsc -b && vite build --mode demo",
     "lint": "eslint .",
     "test:e2e": "playwright test",
+    "test:demo": "playwright test --config playwright.demo.config.ts",
     "preview:demo": "vite preview --mode demo --port 43179",
     "preview": "vite preview"
   },
