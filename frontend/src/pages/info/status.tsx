@@ -5,6 +5,7 @@ import { Header } from "../../components/UI/header/header";
 import { useLocale } from "../../context/LocaleContext";
 import { apiUrl } from "../../lib/urls";
 import styles from "./infoPages.module.css";
+import DemoNotice from "../../demo/DemoNotice";
 
 type State = "loading" | "operational" | "degraded" | "offline";
 interface HealthResponse {
@@ -81,6 +82,7 @@ export default function StatusPage() {
     <div className={styles.page}>
       <Header />
       <main className={`${styles.main} ${styles.status_main}`}>
+        <DemoNotice kind="status" />
         <header className={styles.status_hero}>
           <div>
             <span>{t("status.label")}</span>

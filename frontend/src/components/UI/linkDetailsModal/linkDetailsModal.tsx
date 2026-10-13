@@ -5,6 +5,7 @@ import { useLocale } from "../../../context/LocaleContext";
 import { apiUrl, buildShortUrl } from "../../../lib/urls";
 import styles from "./linkDetailsModal.module.css";
 import { useDialog } from "../../../hooks/useDialog";
+import DemoNotice from "../../../demo/DemoNotice";
 
 export interface ManagedLink {
   url_id: number;
@@ -208,6 +209,7 @@ export default function LinkDetailsModal({ item, onClose, onUpdated }: Props) {
             ×
           </button>
         </header>
+        <DemoNotice kind="analytics" />
 
         <div className={styles.content}>
           <aside className={styles.controls}>

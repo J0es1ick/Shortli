@@ -23,8 +23,8 @@ export default function Footer() {
           >
             {t("footer.contact")}
           </a>
-          <a href="/#shorten">{t("footer.create")}</a>
-          <a href="/#history">{t("footer.archive")}</a>
+          <Link to="/#shorten">{t("footer.create")}</Link>
+          <Link to="/#history">{t("footer.archive")}</Link>
           <Link to="/privacy">{t("footer.privacy")}</Link>
           <Link to="/terms">{t("footer.terms")}</Link>
           <Link to="/status">{t("footer.status")}</Link>

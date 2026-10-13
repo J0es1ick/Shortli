@@ -7,6 +7,7 @@ import styles from "./loginModal.module.css";
 import { useLocale } from "../../../context/LocaleContext";
 import { useDialog } from "../../../hooks/useDialog";
 import { apiJSON } from "../../../lib/api";
+import DemoNotice from "../../../demo/DemoNotice";
 
 interface LoginResponse {
   user_id: number;
@@ -114,6 +115,7 @@ export default function LoginModal({
           </button>
         </div>
         <form onSubmit={handleLogin}>
+          <DemoNotice kind="auth" />
           <label className={styles.form_group}>
             <span>{t("login.email")}</span>
             <input

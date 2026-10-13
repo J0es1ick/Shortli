@@ -13,6 +13,8 @@ import { useLocale } from "../../context/LocaleContext";
 import { useUser } from "../../context/UserContext";
 import { API_BASE, apiUrl } from "../../lib/urls";
 import styles from "./developers.module.css";
+import { isDemo } from "../../demo/config";
+import DemoNotice from "../../demo/DemoNotice";
 
 interface APIKeyRecord {
   key_id: number;
@@ -35,7 +37,10 @@ export default function DevelopersPage() {
   const [copied, setCopied] = useState("");
 
   const baseURL = useMemo(
-    () => `${API_BASE || window.location.origin}/api/v1`,
+    () =>
+      isDemo
+        ? "https://api.example.invalid/api/v1"
+        : `${API_BASE || window.location.origin}/api/v1`,
     [],
   );
   const curlExample = `curl -X POST '${baseURL}/links' \\\n+  -H 'Content-Type: application/json' \\\n+  -H 'X-API-Key: YOUR_API_KEY' \\\n+  -d '{"original_url":"https://example.com/long-page","expires_at":"2026-08-01T12:00:00Z"}'`;
@@ -130,6 +135,7 @@ export default function DevelopersPage() {
     <div className={styles.page}>
       <Header />
       <main className={styles.main}>
+        <DemoNotice kind="api" />
         <section className={styles.hero}>
           <span>{t("developers.label")}</span>
           <h1>{t("developers.title")}</h1>
@@ -189,14 +195,16 @@ export default function DevelopersPage() {
               </article>
             ))}
           </div>
-          <a
-            className={styles.schema_link}
-            href={apiUrl("/api/v1/openapi.json")}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {t("developers.openApi")} ↗
-          </a>
+          {!isDemo && (
+            <a
+              className={styles.schema_link}
+              href={apiUrl("/api/v1/openapi.json")}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("developers.openApi")} ↗
+            </a>
+          )}
         </section>
 
         <section className={styles.keys_section} id="api-keys">

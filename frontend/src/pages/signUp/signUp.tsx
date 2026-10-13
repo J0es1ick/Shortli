@@ -7,6 +7,7 @@ import { useUser } from "../../context/UserContext";
 import { apiUrl } from "../../lib/urls";
 import styles from "./signUp.module.css";
 import { useLocale } from "../../context/LocaleContext";
+import DemoNotice from "../../demo/DemoNotice";
 
 export default function SignUpPage() {
   const navigate = useNavigate();
@@ -92,6 +93,7 @@ export default function SignUpPage() {
             <p>{t("signup.simple")}</p>
           </div>
           <form onSubmit={handleRegister}>
+            <DemoNotice kind="auth" />
             <label>
               <span>{t("signup.email")}</span>
               <input

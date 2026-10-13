@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Footer from "../../components/UI/footer/footer";
 import { Header } from "../../components/UI/header/header";
 import NetworkMesh from "../../components/networkMesh/networkMesh";
@@ -64,9 +64,9 @@ export default function Stats() {
         </section>
 
         <nav className={styles.sectionNav} aria-label={t("admin.sections")}>
-          {canManageUsers && <a href="#team">{t("admin.section.team")}</a>}
-          <a href="#moderation">{t("admin.section.moderation")}</a>
-          <a href="#links">{t("admin.section.links")}</a>
+          {canManageUsers && <Link to="#team">{t("admin.section.team")}</Link>}
+          <Link to="#moderation">{t("admin.section.moderation")}</Link>
+          <Link to="#links">{t("admin.section.links")}</Link>
         </nav>
 
         {canManageUsers && <AdminUsers />}

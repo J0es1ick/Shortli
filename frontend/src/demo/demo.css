@@ -1,0 +1,162 @@
+.demo-panel {
+  position: relative;
+  z-index: 20;
+  padding: 18px clamp(18px, 4vw, 64px);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 14px;
+  animation: demo-enter 350ms ease both;
+}
+.demo-panel-heading,
+.demo-controls,
+.demo-confirm,
+.demo-preview-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+.demo-panel-heading {
+  margin-bottom: 12px;
+}
+.demo-panel-heading strong {
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+}
+.demo-panel-heading span {
+  color: var(--text-secondary);
+}
+.demo-controls select,
+.demo-panel button,
+.demo-preview button,
+.demo-preview-actions a {
+  padding: 10px 14px;
+  border: 1px solid var(--line-soft);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+.demo-panel button:hover:not(:disabled),
+.demo-preview button:hover:not(:disabled),
+.demo-preview-actions a:hover {
+  background: var(--surface-inverse);
+  color: var(--text-inverse);
+  transform: translateY(-2px);
+}
+.demo-panel button:active:not(:disabled),
+.demo-preview button:active:not(:disabled) {
+  transform: translateY(0);
+}
+.demo-panel :disabled,
+.demo-preview :disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.demo-panel summary {
+  cursor: pointer;
+  text-underline-offset: 4px;
+}
+.demo-panel summary:hover {
+  text-decoration: underline;
+}
+.demo-panel :focus-visible,
+.demo-preview :focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 4px;
+}
+.demo-explanation {
+  max-width: 820px;
+  line-height: 1.65;
+  animation: demo-enter 200ms ease;
+}
+.demo-controls details[open] {
+  flex-basis: 100%;
+}
+.demo-panel a,
+.demo-preview a {
+  color: inherit;
+  text-underline-offset: 4px;
+}
+.demo-confirm {
+  padding-top: 16px;
+  animation: demo-enter 200ms ease;
+}
+.demo-notice {
+  padding: 18px;
+  border: 1px dashed var(--line-soft);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.demo-preview {
+  position: relative;
+  max-width: 960px;
+  margin: 60px auto;
+  padding: 0 24px;
+  min-height: 50vh;
+  animation: demo-enter 350ms ease both;
+}
+.demo-preview h1 {
+  font-size: clamp(36px, 5vw, 68px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+.demo-preview p {
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+.demo-preview section {
+  padding: 28px;
+  margin: 28px 0;
+  border: 1px solid var(--line-soft);
+  background: var(--surface);
+}
+.demo-preview code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 18px;
+}
+.demo-preview [role="alert"],
+.demo-panel [role="alert"] {
+  color: var(--danger);
+}
+@keyframes demo-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 600px) {
+  .demo-controls {
+    gap: 12px;
+  }
+  .demo-controls label {
+    flex-basis: 100%;
+  }
+  .demo-preview section {
+    padding: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-panel,
+  .demo-explanation,
+  .demo-confirm,
+  .demo-preview {
+    animation: none;
+  }
+  .demo-panel *,
+  .demo-preview * {
+    transition: none;
+  }
+}

@@ -52,8 +52,8 @@ export function Header() {
         </Link>
 
         <nav className={styles.navigation} aria-label={t("header.navigation")}>
-          <a href="/#shorten">{t("header.shorten")}</a>
-          <a href="/#history">{t("header.archive")}</a>
+          <Link to="/#shorten">{t("header.shorten")}</Link>
+          <Link to="/#history">{t("header.archive")}</Link>
           <Link to="/developers">{t("header.api")}</Link>
           {hasStaffAccess(user) && (
             <Link to="/stats">{t("header.control")}</Link>

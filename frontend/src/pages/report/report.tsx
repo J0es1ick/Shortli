@@ -6,6 +6,7 @@ import { Header } from "../../components/UI/header/header";
 import { useLocale } from "../../context/LocaleContext";
 import { apiUrl } from "../../lib/urls";
 import styles from "./report.module.css";
+import DemoNotice from "../../demo/DemoNotice";
 
 const reasons = [
   "phishing",
@@ -70,6 +71,7 @@ export default function ReportPage() {
     <div className={styles.page}>
       <Header />
       <main className={styles.main}>
+        <DemoNotice kind="report" />
         <header className={styles.hero}>
           <span>{t("report.label")}</span>
           <h1>{t("report.title")}</h1>

@@ -14,6 +14,7 @@ import {
   type Locale,
   type TranslationKey,
 } from "../i18n/translations";
+import { isDemo } from "../demo/config";
 
 interface LocaleContextValue {
   locale: Locale;
@@ -114,7 +115,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const apiError = useCallback(
     (message: string | undefined, fallback: TranslationKey) => {
       if (!message) return t(fallback);
-      if (locale === "en") return message;
+      if (locale === "en" || isDemo) return message;
       return ruApiErrors[message] || t(fallback);
     },
     [locale, t],

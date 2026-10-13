@@ -1,3 +1,5 @@
+import { sendRequest } from "@shortli/transport";
+
 export class ApiError extends Error {
   status: number;
 
@@ -26,16 +28,17 @@ export async function apiFetch(
     controller.abort();
   }, timeoutMs);
   try {
-    const response = await fetch(input, {
+    const request = {
       credentials: "include",
       ...init,
       signal: controller.signal,
-    });
+    } satisfies RequestInit;
+    const response = await sendRequest(input, request);
     const body = await response.arrayBuffer();
     return new Response(
       response.status === 204 ||
-        response.status === 205 ||
-        response.status === 304
+      response.status === 205 ||
+      response.status === 304
         ? null
         : body,
       {

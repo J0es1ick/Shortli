@@ -1,7 +1,7 @@
 import { apiFetch } from "../../lib/api";
 import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "../../context/LocaleContext";
-import { apiUrl } from "../../lib/urls";
+import { apiUrl, buildShortUrl } from "../../lib/urls";
 import { useUser } from "../../context/UserContext";
 import { getUserRole } from "../../lib/userAccess";
 import styles from "./abuseReports.module.css";
@@ -170,7 +170,7 @@ export default function AbuseReports() {
               </div>
               <div className={styles.reportBody}>
                 <a
-                  href={`/${report.short_code}`}
+                  href={buildShortUrl(report.short_code)}
                   target="_blank"
                   rel="noreferrer"
                 >

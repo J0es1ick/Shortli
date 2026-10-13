@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import DemoNotice from "../../demo/DemoNotice";
 import Footer from "../../components/UI/footer/footer";
 import { Header } from "../../components/UI/header/header";
 import { useLocale } from "../../context/LocaleContext";
@@ -35,6 +37,7 @@ export default function LegalPage({
     <div className={styles.page}>
       <Header />
       <main className={styles.main}>
+        <DemoNotice kind="legal" />
         <header className={styles.hero}>
           <span>{t(label)}</span>
           <h1>{t(title)}</h1>
@@ -45,9 +48,9 @@ export default function LegalPage({
           <aside>
             <span>{t("legal.navigation")}</span>
             {sections.map((section, index) => (
-              <a key={section.title} href={`#section-${index + 1}`}>
+              <Link key={section.title} to={`#section-${index + 1}`}>
                 {String(index + 1).padStart(2, "0")} / {t(section.title)}
-              </a>
+              </Link>
             ))}
           </aside>
           <article>
